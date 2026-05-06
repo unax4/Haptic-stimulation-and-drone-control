@@ -22,7 +22,6 @@ This project implements a haptic feedback system integrated with UAV (Unmanned A
 - **Subdirectories:**
   - `neural/` - Neural network models for gesture recognition (TFLite models, training scripts)
   - `build/` - Arduino build artifacts
-  - `captures/` - Noise profiles and test data
   - `archive/` - Previous versions of firmware
 
 #### `drone_e58_module/`
@@ -53,41 +52,31 @@ This project implements a haptic feedback system integrated with UAV (Unmanned A
   - `neural/` - Neural network models
   - `camera_prog/` - Camera-specific control and tracking code
   - `build/` & `build_noNN/` - Build artifacts (with and without neural network)
-  - `captures/` - Test captures and noise profiles
   - `Original project/` - Complete reference implementation with backend/frontend
 
-### **Development & Testing**
-
-#### `etc/`
-- **Legacy and Experimental Code**
-- Contains older versions and experimental implementations
-- **Contents include:**
-  - Multiple versions of control scripts (v0-v6)
-  - `main_control.py`, `main_mp.py` - Main control programs
-  - `imu_control.py` - IMU-based control
-  - `mollweide.py` - Projection utility
-  - `tenis_frontal_guante.py` - Glove-based tennis racket control
-  - `receive_video_distance.py` - Video and distance reception
+#### `drone_e58_module/`
+- **Modular Arduino Implementation for E58 with Haptic Integration**
+- Header files implementing modular drone control system
+- **Key components:**
+  - `drone_e58_module.ino` - Main module firmware
+  - `drone_ahrs.h` - AHRS (Attitude Heading Reference System) implementation
+  - `drone_haptics.h` - Haptic feedback controller
+  - `drone_nn.h` - Neural network inference module
+  - `drone_protocol.h` - Communication protocol handler
+  - `drone_serial.h` - Serial communication interface
+  - `drone_state.h` - Drone state management
+  - `HAPTIC_FEEDBACK_SYSTEM_DOCUMENTATION.md` - Detailed haptic system documentation
 - **Subdirectories:**
-  - `est_fuante/` - Source/experimental implementations
-  - `guante_v2/` - V2 version of glove control system
+  - `neural/` - TFLite models and training data for gesture recognition
 
 #### `est_fuante_pruebas/`
 - **Testing and Experimentation**
 - Contains test implementations for fuente (source) components
 - `est_fuante_pruebas.ino` - Test Arduino firmware
 
-### **Data & Captures**
-
-#### `captures/`
-- **Recorded Data and Test Captures**
-- `mobile_to_drone_events.jsonl` - Event logs from mobile-to-drone communication
-- Subdirectories contain noise profiles for signal processing
-
 ### **Root Level Files**
 
 - `main_prog_vMahony.py` - Main program using Mahony AHRS algorithm
-- `pruebas.py` - General testing script
 - `HAPTIC_FEEDBACK_SYSTEM_DOCUMENTATION.md` - System-wide haptic documentation
 - `yolov8n.pt`, `yolov8n-seg.pt` - YOLOv8 pre-trained models for object detection/segmentation
 
