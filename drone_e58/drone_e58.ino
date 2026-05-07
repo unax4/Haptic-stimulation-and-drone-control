@@ -65,7 +65,8 @@ const unsigned long HAPTIC_SINGLE_PULSE_MS = 1000;
 const int HAPTIC_BURST_COUNT = 5;
 const unsigned long HAPTIC_BURST_PULSE_MS = 50;
 const unsigned long HAPTIC_BURST_PAUSE_MS = 100;
-const int HAPTIC_ACTION_BURST_COUNT = 3;
+const int HAPTIC_ACTION_BURST_DEFAULT_COUNT = 1;
+const int HAPTIC_ACTION_BURST_SPECIAL_COUNT = 3;
 const float HAPTIC_DEFAULT_FREQ_HZ = 100.0;
 const unsigned long HAPTIC_DEFAULT_PW_US = 400;
 const unsigned long HAPTIC_DEFAULT_TRAIN_MS = 2000;
@@ -112,7 +113,7 @@ const int LAND_FINAL_DELAY_MS = 20;
 #if ENABLE_GLOVE_NN
 const unsigned long NN_PERIOD_MS = 80;
 const unsigned long NN_HOLD_MS = 350;
-const unsigned long NN_ZERO_TO_HEADLESS_HOLD_MS = 1500;
+const unsigned long NN_ZERO_TO_HEADLESS_HOLD_MS = 2000;
 const int NN_MIN_MARGIN_Q = 5;
 const unsigned long NN_ACTION_COOLDOWN_MS = 900;
 #endif
@@ -383,16 +384,17 @@ void triggerHapticFeedback(HapticFeedback *feedback, int potValue) {
   feedback->lastTriggerMs = millis();
 }
 
-void triggerHapticAction(HapticPosition position, int potValue) {
+void triggerHapticAction(HapticPosition position, int potValue, int burstCount = HAPTIC_ACTION_BURST_DEFAULT_COUNT) {
   // Set position on HV2701 switch matrix
   hapticSendToHV2701(positions[position]);
   // Set potentiometer intensity
   hapticSetPot(potValue);
   // Burst for action feedback
-  hapticStartBurst(HAPTIC_ACTION_BURST_COUNT, HAPTIC_BURST_PULSE_MS, HAPTIC_BURST_PAUSE_MS);
+  int bCount = max(1, burstCount);
+  hapticStartBurst(bCount, HAPTIC_BURST_PULSE_MS, HAPTIC_BURST_PAUSE_MS);
   // Reserve haptic output for action burst before continuous train resumes.
-  unsigned long actionMs = (unsigned long)(HAPTIC_ACTION_BURST_COUNT * HAPTIC_BURST_PULSE_MS) +
-                           (unsigned long)(max(0, HAPTIC_ACTION_BURST_COUNT - 1) * HAPTIC_BURST_PAUSE_MS);
+  unsigned long actionMs = (unsigned long)(bCount * HAPTIC_BURST_PULSE_MS) +
+                           (unsigned long)(max(0, bCount - 1) * HAPTIC_BURST_PAUSE_MS);
   hapticActionLockUntilMs = millis() + actionMs;
   if (hapticDebugEnabled) {
     Serial.print(F("[HDBG] BURST pos="));
@@ -400,7 +402,7 @@ void triggerHapticAction(HapticPosition position, int potValue) {
     Serial.print(F(" pot="));
     Serial.print(potValue);
     Serial.print(F(" count="));
-    Serial.print(HAPTIC_ACTION_BURST_COUNT);
+    Serial.print(bCount);
     Serial.print(F(" on="));
     Serial.print(HAPTIC_BURST_PULSE_MS);
     Serial.print(F("ms off="));
@@ -1025,11 +1027,15 @@ void applyNNAction(int cls) {
   switch (cls) {
     case 1:
       flagStop = true;
+      triggerHapticAction(HAPTIC_POS_THROTTLE, 18);  // STOP: 1 burst on M20 (palm) with pot 18
+      Serial.println(F("[HAPTIC] Stop feedback triggered"));
       Serial.println(F("[NN] STOP action"));
       break;
 
     case 3:
       flagTakeoff = true;
+      triggerHapticAction(HAPTIC_POS_YAW, 20);  // TAKEOFF: 1 burst on M4 (thumb) with pot 20
+      Serial.println(F("[HAPTIC] Takeoff feedback triggered"));
       Serial.println(F("[NN] TAKEOFF action"));
       break;
 
@@ -1044,12 +1050,14 @@ void applyNNAction(int cls) {
       nnFlipModeEnabled = true;
       nnFlipTriggerLatched = false;
       nnFlipModeSinceMillis = millis();
-      triggerHapticAction(HAPTIC_POS_THROTTLE, 18);  // 3 bursts on M20 (palm) to indicate flip mode armed
+      triggerHapticAction(HAPTIC_POS_THROTTLE, 18, HAPTIC_ACTION_BURST_SPECIAL_COUNT);  // 3 bursts on M20 (palm) to indicate flip mode armed
       Serial.println(F("[NN] FLIP ARMED (one-shot)"));
       break;
 
     case 2:
       flagLand = true;
+      triggerHapticAction(HAPTIC_POS_PITCH, 25);  // LAND: 1 burst on M8 (index) with pot 25
+      Serial.println(F("[HAPTIC] Land feedback triggered"));
       Serial.println(F("[NN] LAND action"));
       break;
 
@@ -1128,18 +1136,20 @@ void updateNNRecognition(int rawA1, int rawA0) {
 
   nnStablePosition = pred;
 
-  if (pred == 4 &&
-      !nnZeroLongHoldHeadlessTriggered &&
-      (now - nnClassStartMillis >= NN_ZERO_TO_HEADLESS_HOLD_MS)) {
-    headlessEnabled = !headlessEnabled;
-    if (headlessEnabled) {
-      headlessRefYawDeg = yawDeg;
+    if (pred == 4 &&
+        !nnZeroLongHoldHeadlessTriggered &&
+        (now - nnClassStartMillis >= NN_ZERO_TO_HEADLESS_HOLD_MS)) {
+      headlessEnabled = !headlessEnabled;
+      if (headlessEnabled) {
+        headlessRefYawDeg = yawDeg;
+      }
+      flagHeadlessPulse = true;
+      triggerHapticAction(HAPTIC_POS_ROLL, 30, HAPTIC_ACTION_BURST_SPECIAL_COUNT);  // Headless feedback: M12, 3-burst, pot 30
+      Serial.println(F("[HAPTIC] Headless long-hold feedback triggered"));
+      nnZeroLongHoldHeadlessTriggered = true;
+      Serial.print(F("[NN] HEADLESS long-hold from ZERO -> "));
+      Serial.println(headlessEnabled ? F("ON") : F("OFF"));
     }
-    flagHeadlessPulse = true;
-    nnZeroLongHoldHeadlessTriggered = true;
-    Serial.print(F("[NN] HEADLESS long-hold from ZERO -> "));
-    Serial.println(headlessEnabled ? F("ON") : F("OFF"));
-  }
 
   if (pred == nnLastActionClass) return;
   if (now - lastNNActionMillis < NN_ACTION_COOLDOWN_MS) return;
@@ -1219,6 +1229,8 @@ void handleSerialCommandLine(const char *cmdLine) {
       headlessRefYawDeg = yawDeg;
     }
     flagHeadlessPulse = true;
+    triggerHapticAction(HAPTIC_POS_ROLL, 30, HAPTIC_ACTION_BURST_SPECIAL_COUNT);
+    Serial.println(F("[HAPTIC] Headless feedback triggered"));
     Serial.print(F("[MODE] HEADLESS "));
     Serial.println(headlessEnabled ? F("ON") : F("OFF"));
     return;
@@ -1683,7 +1695,7 @@ void loop() {
       if (flipBurstRemaining > 0) {
         // Haptic feedback: Flip mode on palm region (M20, B3) with pot 18
         if (flipBurstRemaining == FLIP_BURST_PACKETS) {
-          triggerHapticAction(HAPTIC_POS_THROTTLE, 18);
+          triggerHapticAction(HAPTIC_POS_THROTTLE, 18, HAPTIC_ACTION_BURST_SPECIAL_COUNT);
           Serial.println(F("[HAPTIC] Flip mode feedback triggered"));
         }
         stickRoll = flipRoll;
