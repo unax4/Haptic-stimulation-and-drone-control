@@ -43,7 +43,7 @@
 // -----------------------------------------------------------------------------
 const char* DRONE_SSID = "WIFI_8K__bcc908";
 //const char* DRONE_SSID = "WIFI_8K_Wd02711";
-const char* DRONE_PASSWORD = "";  // Usually open AP
+const char* DRONE_PASSWORD = "";  // open AP
 
 const char* DRONE_IP = "192.168.4.153";
 const int DRONE_SESSION_PORT = 8080;
@@ -100,13 +100,10 @@ const int THR_DOWN_PIN = A3;
 const int START_BURST_COUNT = 6;
 const int START_BURST_DELAY_MS = 30;
 
-const int FLIP_BURST_PACKETS = 20;
-const int FLIP_RECOVER_PACKETS = 10;
-const float FLIP_POST_HOLD_S = 0.35f;
-const uint8_t FLIP_THR_MIN = 165;
-const uint8_t FLIP_THR_BURST_BOOST = 28;
-const uint8_t FLIP_THR_RECOVER_BOOST = 14;
-const uint8_t FLIP_THR_POST_BOOST = 12;
+const int FLIP_BURST_PACKETS = 20;       // max practical: 100 (about 1.0 s at 100 Hz control)
+const int FLIP_RECOVER_PACKETS = 24;     // max practical: 300 (about 3.0 s at 100 Hz control)
+const uint8_t FLIP_BURST_THROTTLE = 212; // max protocol/stick: 220
+const uint8_t FLIP_RECOVER_THROTTLE = 204; // max protocol/stick: 220
 
 const float LAND_TIMED_RAMP_S = 4.0f;
 const int LAND_FINAL_PACKETS = 10;
@@ -115,6 +112,7 @@ const int LAND_FINAL_DELAY_MS = 20;
 #if ENABLE_GLOVE_NN
 const unsigned long NN_PERIOD_MS = 80;
 const unsigned long NN_HOLD_MS = 350;
+const unsigned long NN_ZERO_TO_HEADLESS_HOLD_MS = 1500;
 const int NN_MIN_MARGIN_Q = 5;
 const unsigned long NN_ACTION_COOLDOWN_MS = 900;
 #endif
@@ -196,7 +194,7 @@ unsigned long hapticPulseWidth_us = HAPTIC_DEFAULT_PW_US;
 unsigned long hapticTrainDuration_ms = HAPTIC_DEFAULT_TRAIN_MS;
 unsigned long hapticActionLockUntilMs = 0;
 int hapticMuxCursor = -1;  // Round-robin cursor across [yaw,pitch,roll,throttle]
-bool hapticDebugEnabled = true;
+bool hapticDebugEnabled = false;
 bool hapticAnyActiveLast = false;
 
 // -------- Haptic Feedback Mapping (from PDF) --------
@@ -254,6 +252,7 @@ unsigned long lastHapticFeedbackMs = 0;
 
 float yawDeg = 0.0f, pitchDeg = 0.0f, rollDeg = 0.0f;
 float throttleSmooth = (float)STICK_MID;
+float gyroDpsX = 0.0f, gyroDpsY = 0.0f, gyroDpsZ = 0.0f;
 
 unsigned long lastImuMicros = 0;
 unsigned long lastCtrlMillis = 0;
@@ -270,6 +269,8 @@ bool flagLand = false;
 bool flagStop = false;
 bool flagCalibrate = false;
 bool flagHeadlessPulse = false;
+bool headlessEnabled = false;
+float headlessRefYawDeg = 0.0f;
 
 // Flip state.
 bool flipInProgress = false;
@@ -278,11 +279,6 @@ int flipRecoverRemaining = 0;
 uint8_t flipRoll = STICK_MID;
 uint8_t flipPitch = STICK_MID;
 uint8_t flipHoldYaw = STICK_MID;
-uint8_t flipBurstThrottle = STICK_MID;
-uint8_t flipRecoverStartThrottle = STICK_MID;
-uint8_t flipRecoverEndThrottle = STICK_MID;
-uint8_t flipPostHoldThrottle = STICK_MID;
-unsigned long flipPostHoldUntilMs = 0;
 
 #if ENABLE_GLOVE_NN
 using Eloquent::CortexM::TensorFlow;
@@ -292,9 +288,8 @@ constexpr int kNNNumOutputs = 9;
 constexpr int kNNNumOps = 10;
 TensorFlow<kNNNumOps, kNNTensorArenaSize> tf;
 
-
-float nnScalerMean[kNNNumInputs] = {436.91032609f, 381.33152174f};
-float nnScalerScale[kNNNumInputs] = {62.69738485f, 71.23006118f};
+float nnScalerMean[kNNNumInputs] = {434.19621749f, 379.56973995f};
+float nnScalerScale[kNNNumInputs] = {61.45421933f, 70.63745035f};
 
 bool nnReady = false;
 bool nnEnabled = false;
@@ -307,6 +302,7 @@ int nnLastActionClass = -1;
 bool nnFlipModeEnabled = false;
 bool nnFlipTriggerLatched = false;
 unsigned long nnFlipModeSinceMillis = 0;
+bool nnZeroLongHoldHeadlessTriggered = false;
 #endif
 
 // -------- Haptic SPI Communication --------
@@ -723,6 +719,23 @@ uint8_t angleToStick(float angle, float deadzone, float sensitivity, float expo)
   return (uint8_t)constrain((int)raw, STICK_MIN, STICK_MAX);
 }
 
+float wrapDeg180(float a) {
+  while (a > 180.0f) a -= 360.0f;
+  while (a < -180.0f) a += 360.0f;
+  return a;
+}
+
+void applyHeadlessTransform(uint8_t &stickRoll, uint8_t &stickPitch, float yawNowDeg) {
+  float relDeg = wrapDeg180(yawNowDeg - headlessRefYawDeg);
+  float th = relDeg * (float)(M_PI / 180.0);
+  float x = (float)((int)stickRoll - (int)STICK_MID);
+  float y = (float)((int)stickPitch - (int)STICK_MID);
+  float xr = x * cosf(th) - y * sinf(th);
+  float yr = x * sinf(th) + y * cosf(th);
+  stickRoll = (uint8_t)constrain((int)roundf((float)STICK_MID + xr), (int)STICK_MIN, (int)STICK_MAX);
+  stickPitch = (uint8_t)constrain((int)roundf((float)STICK_MID + yr), (int)STICK_MIN, (int)STICK_MAX);
+}
+
 float flexDeflection(int raw, int idx) {
   float delta = (float)raw - flexMean[idx];
   float thresh = FLEX_THRESH_STD_MULTIPLIER * flexStd[idx];
@@ -832,7 +845,7 @@ void sendCalibratePulse() {
 
 void sendHeadlessPulse() {
   // Mirrors Python: one-shot command pulse (not persistent headless byte).
-  sendControlPacket(lastStickYaw, STICK_MID, lastStickThrottle, STICK_MID, CMD_HEADLESS_PULSE);
+  sendControlPacket(STICK_MID, STICK_MID, lastStickThrottle, lastStickYaw, CMD_HEADLESS_PULSE);
 }
 
 // -----------------------------------------------------------------------------
@@ -864,7 +877,13 @@ bool decodeFlipDirection(const char *direction, uint8_t &outRoll, uint8_t &outPi
   return false;
 }
 
-void startFlip(const char *direction, uint8_t throttleSnapshot, uint8_t yawSnapshot) {
+void clearFlipState() {
+  flipInProgress = false;
+  flipBurstRemaining = 0;
+  flipRecoverRemaining = 0;
+}
+
+void startFlip(const char *direction, uint8_t yawSnapshot) {
   if (!flightArmed) {
     Serial.println(F("[FLIP] Ignored: drone not armed."));
     return;
@@ -884,12 +903,6 @@ void startFlip(const char *direction, uint8_t throttleSnapshot, uint8_t yawSnaps
   flipRoll = dirRoll;
   flipPitch = dirPitch;
   flipHoldYaw = yawSnapshot;
-  uint8_t baseThrottle = (uint8_t)constrain(max((int)throttleSnapshot, (int)FLIP_THR_MIN), (int)STICK_MIN, (int)STICK_MAX);
-  flipBurstThrottle = (uint8_t)constrain((int)baseThrottle + (int)FLIP_THR_BURST_BOOST, (int)STICK_MIN, (int)STICK_MAX);
-  flipRecoverStartThrottle = (uint8_t)constrain((int)baseThrottle + (int)FLIP_THR_RECOVER_BOOST, (int)STICK_MIN, (int)STICK_MAX);
-  flipRecoverEndThrottle = (uint8_t)constrain((int)baseThrottle + (int)FLIP_THR_POST_BOOST, (int)STICK_MIN, (int)STICK_MAX);
-  flipPostHoldThrottle = flipRecoverEndThrottle;
-  flipPostHoldUntilMs = 0;
   flipBurstRemaining = FLIP_BURST_PACKETS;
   flipRecoverRemaining = FLIP_RECOVER_PACKETS;
   flipInProgress = true;
@@ -906,13 +919,13 @@ void sendLandPacket(uint8_t yawSnapshot) {
 
   sendControlPacket(STICK_MID, STICK_MID, STICK_MIN, yawSnapshot, CMD_LAND);
   flightArmed = false;
-  flipInProgress = false;
+  clearFlipState();
   Serial.println(F("[LAND] Land packet sent"));
 }
 
 void triggerLocalRecalibration() {
   flightArmed = false;
-  flipInProgress = false;
+  clearFlipState();
 
   gyroCalibrated = false;
   flexCalibrated = false;
@@ -938,6 +951,7 @@ void triggerLocalRecalibration() {
   nnFlipModeEnabled = false;
   nnFlipTriggerLatched = false;
   nnFlipModeSinceMillis = 0;
+  nnZeroLongHoldHeadlessTriggered = false;
 #endif
 
   Serial.println(F("[CALIB] Re-calibrating, keep still..."));
@@ -1091,12 +1105,14 @@ void updateNNRecognition(int rawA1, int rawA0) {
     nnLastClass = -1;
     nnClassStartMillis = 0;
     nnStablePosition = -1;
+    nnZeroLongHoldHeadlessTriggered = false;
     return;
   }
 
   if (pred != nnLastClass) {
     nnLastClass = pred;
     nnClassStartMillis = now;
+    nnZeroLongHoldHeadlessTriggered = false;
   }
 
   if (pred == 0) {
@@ -1111,6 +1127,20 @@ void updateNNRecognition(int rawA1, int rawA0) {
   if (now - nnClassStartMillis < NN_HOLD_MS) return;
 
   nnStablePosition = pred;
+
+  if (pred == 4 &&
+      !nnZeroLongHoldHeadlessTriggered &&
+      (now - nnClassStartMillis >= NN_ZERO_TO_HEADLESS_HOLD_MS)) {
+    headlessEnabled = !headlessEnabled;
+    if (headlessEnabled) {
+      headlessRefYawDeg = yawDeg;
+    }
+    flagHeadlessPulse = true;
+    nnZeroLongHoldHeadlessTriggered = true;
+    Serial.print(F("[NN] HEADLESS long-hold from ZERO -> "));
+    Serial.println(headlessEnabled ? F("ON") : F("OFF"));
+  }
+
   if (pred == nnLastActionClass) return;
   if (now - lastNNActionMillis < NN_ACTION_COOLDOWN_MS) return;
 
@@ -1184,7 +1214,13 @@ void handleSerialCommandLine(const char *cmdLine) {
     return;
   }
   if (strcmp(cmd, "H") == 0 || strcmp(cmd, "HEADLESS") == 0) {
+    headlessEnabled = !headlessEnabled;
+    if (headlessEnabled) {
+      headlessRefYawDeg = yawDeg;
+    }
     flagHeadlessPulse = true;
+    Serial.print(F("[MODE] HEADLESS "));
+    Serial.println(headlessEnabled ? F("ON") : F("OFF"));
     return;
   }
   if (strcmp(cmd, "O") == 0 || strcmp(cmd, "ZERO") == 0) {
@@ -1218,8 +1254,7 @@ void handleSerialCommandLine(const char *cmdLine) {
   if (strcmp(cmd, "P") == 0 || strcmp(cmd, "PYUDP") == 0) {
     arduinoUdpEnabled = false;
     flightArmed = false;
-    flipInProgress = false;
-    flipPostHoldUntilMs = 0;
+    clearFlipState();
     Serial.println(F("[MODE] PYTHON_UDP ON (Arduino UDP paused)"));
     return;
   }
@@ -1230,23 +1265,23 @@ void handleSerialCommandLine(const char *cmdLine) {
   }
 
   if (strncmp(cmd, "FLIP:", 5) == 0) {
-    startFlip(cmd + 5, lastStickThrottle, lastStickYaw);
+    startFlip(cmd + 5, lastStickYaw);
     return;
   }
   if (strcmp(cmd, "FF") == 0) {
-    startFlip("FORWARD", lastStickThrottle, lastStickYaw);
+    startFlip("FORWARD", lastStickYaw);
     return;
   }
   if (strcmp(cmd, "FB") == 0) {
-    startFlip("BACKWARD", lastStickThrottle, lastStickYaw);
+    startFlip("BACKWARD", lastStickYaw);
     return;
   }
   if (strcmp(cmd, "FL") == 0) {
-    startFlip("LEFT", lastStickThrottle, lastStickYaw);
+    startFlip("LEFT", lastStickYaw);
     return;
   }
   if (strcmp(cmd, "FR") == 0) {
-    startFlip("RIGHT", lastStickThrottle, lastStickYaw);
+    startFlip("RIGHT", lastStickYaw);
     return;
   }
 
@@ -1557,6 +1592,9 @@ void loop() {
     gx -= gyroBiasX;
     gy -= gyroBiasY;
     gz -= gyroBiasZ;
+    gyroDpsX = gx;
+    gyroDpsY = gy;
+    gyroDpsZ = gz;
 
     unsigned long nowUs = micros();
     float dt = (float)(nowUs - lastImuMicros) * 1e-6f;
@@ -1608,8 +1646,7 @@ void loop() {
       cmd = CMD_STOP;
       flagStop = false;
       flightArmed = false;
-      flipInProgress = false;
-      flipPostHoldUntilMs = 0;
+      clearFlipState();
       // Haptic feedback: Stop on palm region (M20) with pot 18
       triggerHapticAction(HAPTIC_POS_THROTTLE, 18);
       Serial.println(F("[HAPTIC] Stop feedback triggered"));
@@ -1629,13 +1666,17 @@ void loop() {
 
     if (flagLand) {
       flagLand = false;
-      flipPostHoldUntilMs = 0;
+      clearFlipState();
       // Haptic feedback: Landing on index region (M8) with pot 25
       triggerHapticAction(HAPTIC_POS_PITCH, 25);
       Serial.println(F("[HAPTIC] Landing feedback triggered"));
       sendLandPacket(stickYaw);
       sentLandPacket = true;
       cmd = CMD_LAND;
+    }
+
+    if (headlessEnabled && cmd != CMD_CALIBRATE && !flipInProgress) {
+      applyHeadlessTransform(stickRoll, stickPitch, yawDeg);
     }
 
     if (flipInProgress) {
@@ -1647,7 +1688,7 @@ void loop() {
         }
         stickRoll = flipRoll;
         stickPitch = flipPitch;
-        stickThrottle = flipBurstThrottle;
+        stickThrottle = FLIP_BURST_THROTTLE;
         stickYaw = flipHoldYaw;
         cmd = CMD_NONE;
         sendControlPacket(stickRoll, stickPitch, stickThrottle, stickYaw, cmd, true);
@@ -1657,27 +1698,23 @@ void loop() {
       else if (flipRecoverRemaining > 0) {
         stickRoll = STICK_MID;
         stickPitch = STICK_MID;
-        int recoverStep = FLIP_RECOVER_PACKETS - flipRecoverRemaining;
-        int recoverDen = max(1, FLIP_RECOVER_PACKETS - 1);
-        int thrDelta = (int)flipRecoverStartThrottle - (int)flipRecoverEndThrottle;
-        int recoverThrottle = (int)flipRecoverStartThrottle - ((thrDelta * recoverStep) / recoverDen);
-        stickThrottle = (uint8_t)constrain(recoverThrottle, (int)STICK_MIN, (int)STICK_MAX);
+        stickThrottle = FLIP_RECOVER_THROTTLE;
         stickYaw = flipHoldYaw;
         cmd = CMD_NONE;
         flipRecoverRemaining--;
         if (flipRecoverRemaining == 0) {
-          flipInProgress = false;
-          flipPostHoldUntilMs = millis() + (unsigned long)(FLIP_POST_HOLD_S * 1000.0f);
+          clearFlipState();
           Serial.println(F("[FLIP] DONE"));
         }
       }
       else {
-        flipInProgress = false;
+        clearFlipState();
       }
+
     }
 
-    if (!flipInProgress && flightArmed && millis() < flipPostHoldUntilMs) {
-      stickThrottle = max(stickThrottle, flipPostHoldThrottle);
+    if (headlessEnabled && cmd != CMD_CALIBRATE) {
+      cmd = (uint8_t)(cmd | CMD_HEADLESS_PULSE);
     }
 
 #if ENABLE_GLOVE_NN
@@ -1691,25 +1728,25 @@ void loop() {
     if (nnFlipModeEnabled && flightArmed && !flipInProgress) {
       if (!nnFlipTriggerLatched) {
         if (stickRoll == STICK_MAX) {
-          startFlip("RIGHT", stickThrottle, stickYaw);
+          startFlip("RIGHT", stickYaw);
           nnFlipTriggerLatched = true;
           nnFlipModeEnabled = false;
           nnFlipModeSinceMillis = 0;
         }
         else if (stickRoll == STICK_MIN) {
-          startFlip("LEFT", stickThrottle, stickYaw);
+          startFlip("LEFT", stickYaw);
           nnFlipTriggerLatched = true;
           nnFlipModeEnabled = false;
           nnFlipModeSinceMillis = 0;
         }
         else if (stickPitch == STICK_MAX) {
-          startFlip("FORWARD", stickThrottle, stickYaw);
+          startFlip("FORWARD", stickYaw);
           nnFlipTriggerLatched = true;
           nnFlipModeEnabled = false;
           nnFlipModeSinceMillis = 0;
         }
         else if (stickPitch == STICK_MIN) {
-          startFlip("BACKWARD", stickThrottle, stickYaw);
+          startFlip("BACKWARD", stickYaw);
           nnFlipTriggerLatched = true;
           nnFlipModeEnabled = false;
           nnFlipModeSinceMillis = 0;

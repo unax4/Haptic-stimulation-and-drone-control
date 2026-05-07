@@ -358,6 +358,15 @@ X / STOP                 - Stop + haptic on M20 (pot 18)
 O / ZERO                 - Zero orientation + haptic on M12 (pot 30)
 ```
 
+### 6.2.1 NN Hold Behavior (Position 4)
+
+For NN-based control in `drone_e58.ino`, position `4` has two hold milestones:
+
+- Hold class `4` for `350 ms` (`NN_HOLD_MS`): triggers normal `ZERO`.
+- Keep holding the same class `4` until `1500 ms` total (`NN_ZERO_TO_HEADLESS_HOLD_MS`): toggles `HEADLESS` ON/OFF and sends the headless pulse.
+
+This long-hold headless toggle is emitted once per continuous hold (it resets after releasing/changing class).
+
 ### 6.3 Example Serial Session
 
 ```
