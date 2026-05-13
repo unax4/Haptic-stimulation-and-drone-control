@@ -33,13 +33,21 @@ void handleSerialCommandLine(const char *cmdLine) {
     return;
   }
   if (strcmp(cmd, "H") == 0 || strcmp(cmd, "HEADLESS") == 0) {
+    headlessEnabled = !headlessEnabled;
+    if (headlessEnabled) {
+      headlessRefYawDeg = yawDeg;
+    }
     flagHeadlessPulse = true;
+    triggerHapticAction(HAPTIC_POS_ROLL, 30, HAPTIC_ACTION_BURST_SPECIAL_COUNT);
+    Serial.println(F("[HAPTIC] Headless feedback triggered"));
+    Serial.print(F("[MODE] HEADLESS "));
+    Serial.println(headlessEnabled ? F("ON") : F("OFF"));
     return;
   }
   if (strcmp(cmd, "O") == 0 || strcmp(cmd, "ZERO") == 0) {
     captureZero();
     autoZeroAfterRecalib = false;
-    triggerHapticAction((HapticPosition)HAPTIC_ACTION_ZERO_POS, HAPTIC_ACTION_ZERO_POT);
+    triggerHapticAction(HAPTIC_POS_ROLL, 30);
     Serial.println(F("[HAPTIC] Zero feedback triggered"));
     return;
   }
@@ -66,8 +74,7 @@ void handleSerialCommandLine(const char *cmdLine) {
   if (strcmp(cmd, "P") == 0 || strcmp(cmd, "PYUDP") == 0) {
     arduinoUdpEnabled = false;
     flightArmed = false;
-    flipInProgress = false;
-    flipPostHoldUntilMs = 0;
+    clearFlipState();
     Serial.println(F("[MODE] PYTHON_UDP ON (Arduino UDP paused)"));
     return;
   }
@@ -78,23 +85,23 @@ void handleSerialCommandLine(const char *cmdLine) {
   }
 
   if (strncmp(cmd, "FLIP:", 5) == 0) {
-    startFlip(cmd + 5, lastStickThrottle, lastStickYaw);
+    startFlip(cmd + 5, lastStickYaw);
     return;
   }
   if (strcmp(cmd, "FF") == 0) {
-    startFlip("FORWARD", lastStickThrottle, lastStickYaw);
+    startFlip("FORWARD", lastStickYaw);
     return;
   }
   if (strcmp(cmd, "FB") == 0) {
-    startFlip("BACKWARD", lastStickThrottle, lastStickYaw);
+    startFlip("BACKWARD", lastStickYaw);
     return;
   }
   if (strcmp(cmd, "FL") == 0) {
-    startFlip("LEFT", lastStickThrottle, lastStickYaw);
+    startFlip("LEFT", lastStickYaw);
     return;
   }
   if (strcmp(cmd, "FR") == 0) {
-    startFlip("RIGHT", lastStickThrottle, lastStickYaw);
+    startFlip("RIGHT", lastStickYaw);
     return;
   }
 
@@ -113,12 +120,29 @@ void handleSerialCommandLine(const char *cmdLine) {
     return;
   }
 
+  if (strcmp(cmd, "HDBG") == 0) {
+    hapticDebugEnabled = !hapticDebugEnabled;
+    Serial.print(F("[HAPTIC] Debug "));
+    Serial.println(hapticDebugEnabled ? F("ON") : F("OFF"));
+    return;
+  }
+  if (strcmp(cmd, "HDBGON") == 0 || strcmp(cmd, "HDBG1") == 0) {
+    hapticDebugEnabled = true;
+    Serial.println(F("[HAPTIC] Debug ON"));
+    return;
+  }
+  if (strcmp(cmd, "HDBGOFF") == 0 || strcmp(cmd, "HDBG0") == 0) {
+    hapticDebugEnabled = false;
+    Serial.println(F("[HAPTIC] Debug OFF"));
+    return;
+  }
+
   if (cmd[0] == 'P' && cmd[1] >= '0' && cmd[1] <= '9') {
     int v = atoi(cmd + 1);
     if (v >= 0 && v <= 255) {
       hapticPotValue = v;
       hapticSetPot(v);
-      float resistance_Ohms = (v / 255.0f) * 10000.0f;
+      float resistance_Ohms = (v / 255.0) * 10000.0;
       Serial.print(F("[HAPTIC] Pot = "));
       Serial.print(v);
       Serial.print(F("/255 (~"));
@@ -213,7 +237,7 @@ void handleSerialCommandLine(const char *cmdLine) {
 
   if (strcmp(cmd, "?") == 0 || strcmp(cmd, "HELP") == 0) {
     Serial.println(F("Commands: CONNECT START D T L X C H O R FLIP:<FORWARD|BACKWARD|LEFT|RIGHT> P A N ?"));
-    Serial.println(F("Haptic: Pxxx(pot) HS(pulse) HB(burst) HT(train) HFxx(freq) HWxx(width) HDxx(duration) HSWx(switch) ?"));
+    Serial.println(F("Haptic: Pxxx HS HB HT HFxx HWxx HDxx HSWx HDBG/HDBGON/HDBGOFF ?"));
     return;
   }
 

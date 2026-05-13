@@ -81,6 +81,8 @@ unsigned long hapticPulseWidth_us = HAPTIC_DEFAULT_PW_US;
 unsigned long hapticTrainDuration_ms = HAPTIC_DEFAULT_TRAIN_MS;
 unsigned long hapticActionLockUntilMs = 0;
 int hapticMuxCursor = -1;  // Round-robin cursor across [yaw,pitch,roll,throttle]
+bool hapticDebugEnabled = true;
+bool hapticAnyActiveLast = false;
 
 // -------- Haptic Feedback Mapping --------
 enum HapticPosition {
@@ -109,6 +111,7 @@ unsigned long lastHapticFeedbackMs = 0;
 
 float yawDeg = 0.0f, pitchDeg = 0.0f, rollDeg = 0.0f;
 float throttleSmooth = (float)STICK_MID;
+float gyroDpsX = 0.0f, gyroDpsY = 0.0f, gyroDpsZ = 0.0f;
 
 unsigned long lastImuMicros = 0;
 unsigned long lastCtrlMillis = 0;
@@ -125,6 +128,8 @@ bool flagLand = false;
 bool flagStop = false;
 bool flagCalibrate = false;
 bool flagHeadlessPulse = false;
+bool headlessEnabled = false;
+float headlessRefYawDeg = 0.0f;
 
 // Flip state.
 bool flipInProgress = false;
@@ -133,11 +138,6 @@ int flipRecoverRemaining = 0;
 uint8_t flipRoll = STICK_MID;
 uint8_t flipPitch = STICK_MID;
 uint8_t flipHoldYaw = STICK_MID;
-uint8_t flipBurstThrottle = STICK_MID;
-uint8_t flipRecoverStartThrottle = STICK_MID;
-uint8_t flipRecoverEndThrottle = STICK_MID;
-uint8_t flipPostHoldThrottle = STICK_MID;
-unsigned long flipPostHoldUntilMs = 0;
 
 #if ENABLE_GLOVE_NN
 using Eloquent::CortexM::TensorFlow;
@@ -147,8 +147,8 @@ constexpr int kNNNumOutputs = 9;
 constexpr int kNNNumOps = 10;
 TensorFlow<kNNNumOps, kNNTensorArenaSize> tf;
 
-float nnScalerMean[kNNNumInputs] = {436.91032609f, 381.33152174f};
-float nnScalerScale[kNNNumInputs] = {62.69738485f, 71.23006118f};
+float nnScalerMean[kNNNumInputs] = {434.19621749f, 379.56973995f};
+float nnScalerScale[kNNNumInputs] = {61.45421933f, 70.63745035f};
 
 bool nnReady = false;
 bool nnEnabled = false;
@@ -161,4 +161,5 @@ int nnLastActionClass = -1;
 bool nnFlipModeEnabled = false;
 bool nnFlipTriggerLatched = false;
 unsigned long nnFlipModeSinceMillis = 0;
+bool nnZeroLongHoldHeadlessTriggered = false;
 #endif

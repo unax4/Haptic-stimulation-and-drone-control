@@ -4,57 +4,12 @@
  * E58 WIFI CAM Drone - Direct Arduino Nano RP2040 Connect Controller
  * Modularized version: configure here, logic split across .h modules.
  * -----------------------------------------------------------------------------
- * Current haptic behavior, clearly mapped:
-
-- `TAKEOFF` command:
-  - Position: `M4` (Yaw region / thumb)
-  - Pot: `20`
-  - Pattern: burst, `HAPTIC_ACTION_BURST_COUNT` (currently `1`)
-
-- `LAND` command:
-  - Position: `M8` (Pitch region / index)
-  - Pot: `25`
-  - Pattern: burst, `1`
-
-- `STOP` command:
-  - Position: `M20` (Throttle region / palm)
-  - Pot: `18`
-  - Pattern: burst, `1`
-
-- `ZERO` command:
-  - Position: `M12` (Roll region / middle-ring)
-  - Pot: `30`
-  - Pattern: burst, `1`
-
-- `FLIP start`:
-  - Position: `M20` (palm)
-  - Pot: `18`
-  - Pattern: burst, `1`
-
-- `NN flip armed` (gesture class 7):
-  - Position: `M20` (palm)
-  - Pot: `18`
-  - Pattern: burst, `HAPTIC_FLIP_ARMED_BURST_COUNT` (currently `3`)
-
-Continuous control feedback (while flying controls are off-neutral):
-- Yaw off-mid -> activates `M4`
-- Pitch off-mid -> activates `M8`
-- Roll off-mid -> activates `M12`
-- Throttle off-mid -> activates `M20`
-
-Continuous signal rules:
-- Pattern: train waveform (`HAPTIC_DEFAULT_FREQ_HZ`, `HAPTIC_DEFAULT_PW_US`)
-- Multiple active controls: channels are combined (simultaneous routing ON)
-- Shared intensity pot for all active channels:
-  - Computed from each axis displacement-from-mid
-  - Uses the maximum requested pot among active axes
-- If all controls return neutral: train stops immediately
-
-Intensity ranges used for continuous mode:
-- Yaw: `20..25`
-- Pitch: `25..28`
-- Roll: `31..35`
-- Throttle: `16..20`
+ *
+ * Behavior is kept aligned with drone_e58/drone_e58.ino:
+ * - Mahony AHRS control (yaw/pitch/roll) + flex throttle mapping
+ * - E58 CAM8 UDP protocol (session + control)
+ * - Takeoff / land / stop / calibrate / headless pulse / flip flow
+ * - Serial telemetry and optional TinyML gesture actions
  */
 
 #include <Arduino_LSM6DSOX.h>
@@ -82,7 +37,7 @@ const char* DRONE_IP = "192.168.4.153";
 const int DRONE_SESSION_PORT = 8080;
 const int DRONE_CONTROL_PORT = 8090;
 
-const int CONTROL_HZ = 50;
+const int CONTROL_HZ = 100;
 const int TELEMETRY_HZ = 30;
 
 // -------- Haptic Stimulation Control Pins --------
@@ -97,46 +52,27 @@ const int HAPTIC_OUT_PIN  = 12;
 const unsigned long HAPTIC_SINGLE_PULSE_MS = 1000;
 const int HAPTIC_BURST_COUNT = 5;
 const unsigned long HAPTIC_BURST_PULSE_MS = 50;
-const unsigned long HAPTIC_BURST_PAUSE_MS = 50;
+const unsigned long HAPTIC_BURST_PAUSE_MS = 100;
 
-const int HAPTIC_ACTION_BURST_COUNT = 1;
-const int HAPTIC_FLIP_ARMED_BURST_COUNT = 3;
+const int HAPTIC_ACTION_BURST_DEFAULT_COUNT = 1;
+const int HAPTIC_ACTION_BURST_SPECIAL_COUNT = 3;
 const float HAPTIC_DEFAULT_FREQ_HZ = 100.0f;
 const unsigned long HAPTIC_DEFAULT_PW_US = 400;
-const unsigned long HAPTIC_DEFAULT_TRAIN_MS = 1000;
-
-// -------- Action Haptic Mapping --------
-const int HAPTIC_ACTION_TAKEOFF_POS = 4;
-const int HAPTIC_ACTION_TAKEOFF_POT = 20;
-
-const int HAPTIC_ACTION_LAND_POS = 8;
-const int HAPTIC_ACTION_LAND_POT = 25;
-
-const int HAPTIC_ACTION_STOP_POS = 20;
-const int HAPTIC_ACTION_STOP_POT = 18;
-
-const int HAPTIC_ACTION_ZERO_POS = 12;
-const int HAPTIC_ACTION_ZERO_POT = 30;
-
-const int HAPTIC_ACTION_FLIP_START_POS = 20;
-const int HAPTIC_ACTION_FLIP_START_POT = 18;
-
-const int HAPTIC_ACTION_FLIP_ARMED_POS = 20;
-const int HAPTIC_ACTION_FLIP_ARMED_POT = 18;
+const unsigned long HAPTIC_DEFAULT_TRAIN_MS = 2000;
 // -------- Haptic Feedback Mapping Parameters --------
-const int HAPTIC_YAW_POT_MIN = 20;
+const int HAPTIC_YAW_POT_MIN = 16;
 const int HAPTIC_YAW_POT_MAX = 25;
 
-const int HAPTIC_PITCH_POT_MIN = 25;
+const int HAPTIC_PITCH_POT_MIN = 23;
 const int HAPTIC_PITCH_POT_MAX = 28;
 
-const int HAPTIC_ROLL_POT_MIN = 31;
+const int HAPTIC_ROLL_POT_MIN = 28;
 const int HAPTIC_ROLL_POT_MAX = 35;
 
-const int HAPTIC_THROTTLE_POT_MIN = 16;
+const int HAPTIC_THROTTLE_POT_MIN = 14;
 const int HAPTIC_THROTTLE_POT_MAX = 20;
 
-const unsigned long HAPTIC_FEEDBACK_UPDATE_MS = 20;
+const unsigned long HAPTIC_FEEDBACK_UPDATE_MS = 10;
 
 // -------- Flight / Sensor Parameters --------
 const float MAHONY_KP = 3.5f;
@@ -163,20 +99,25 @@ const float THR_NET_DEADZONE = 0.2f;
 const float THR_EXPO = 0.10f;
 const float THR_NEUTRAL_SNAP_STICK = 2.0f;
 
+const int THR_UP_PIN = A2;
+const int THR_DOWN_PIN = A3;
+
 const int START_BURST_COUNT = 6;
 const int START_BURST_DELAY_MS = 30;
 
 const int FLIP_BURST_PACKETS = 20;
-const int FLIP_RECOVER_PACKETS = 10;
-const float FLIP_POST_HOLD_S = 0.25f;
-const uint8_t FLIP_THR_MIN = 165;  //Minimum throttle used for flip
-const uint8_t FLIP_THR_BURST_BOOST = 28; //Extra throttle during actual somersault packets
-const uint8_t FLIP_THR_RECOVER_BOOST = 25; //Throttle at start of recovery phase.
-const uint8_t FLIP_THR_POST_BOOST = 12;
+const int FLIP_RECOVER_PACKETS = 24;
+const uint8_t FLIP_BURST_THROTTLE = 212;
+const uint8_t FLIP_RECOVER_THROTTLE = 204;
+
+const float LAND_TIMED_RAMP_S = 4.0f;
+const int LAND_FINAL_PACKETS = 10;
+const int LAND_FINAL_DELAY_MS = 20;
 
 #if ENABLE_GLOVE_NN
 const unsigned long NN_PERIOD_MS = 80;
 const unsigned long NN_HOLD_MS = 350;
+const unsigned long NN_ZERO_TO_HEADLESS_HOLD_MS = 2000;
 const int NN_MIN_MARGIN_Q = 5;
 const unsigned long NN_ACTION_COOLDOWN_MS = 900;
 #endif
@@ -355,6 +296,9 @@ void loop() {
     gx -= gyroBiasX;
     gy -= gyroBiasY;
     gz -= gyroBiasZ;
+    gyroDpsX = gx;
+    gyroDpsY = gy;
+    gyroDpsZ = gz;
 
     unsigned long nowUs = micros();
     float dt = (float)(nowUs - lastImuMicros) * 1e-6f;
@@ -393,7 +337,7 @@ void loop() {
       cmd = CMD_TAKEOFF;
       flagTakeoff = false;
       flightArmed = true;
-      triggerHapticAction((HapticPosition)HAPTIC_ACTION_TAKEOFF_POS, HAPTIC_ACTION_TAKEOFF_POT);
+      triggerHapticAction(HAPTIC_POS_YAW, 20);
       Serial.println(F("[HAPTIC] Takeoff feedback triggered"));
       if (!controlStarted) {
         sendConnectSession();
@@ -404,9 +348,8 @@ void loop() {
       cmd = CMD_STOP;
       flagStop = false;
       flightArmed = false;
-      flipInProgress = false;
-      flipPostHoldUntilMs = 0;
-      triggerHapticAction((HapticPosition)HAPTIC_ACTION_STOP_POS, HAPTIC_ACTION_STOP_POT);
+      clearFlipState();
+      triggerHapticAction(HAPTIC_POS_THROTTLE, 18);
       Serial.println(F("[HAPTIC] Stop feedback triggered"));
     }
     else if (flagCalibrate) {
@@ -424,23 +367,27 @@ void loop() {
 
     if (flagLand) {
       flagLand = false;
-      flipPostHoldUntilMs = 0;
-      triggerHapticAction((HapticPosition)HAPTIC_ACTION_LAND_POS, HAPTIC_ACTION_LAND_POT);
+      clearFlipState();
+      triggerHapticAction(HAPTIC_POS_PITCH, 25);
       Serial.println(F("[HAPTIC] Landing feedback triggered"));
       sendLandPacket(stickYaw);
       sentLandPacket = true;
       cmd = CMD_LAND;
     }
 
+    if (headlessEnabled && cmd != CMD_CALIBRATE && !flipInProgress) {
+      applyHeadlessTransform(stickRoll, stickPitch, yawDeg);
+    }
+
     if (flipInProgress) {
       if (flipBurstRemaining > 0) {
         if (flipBurstRemaining == FLIP_BURST_PACKETS) {
-          triggerHapticAction((HapticPosition)HAPTIC_ACTION_FLIP_START_POS, HAPTIC_ACTION_FLIP_START_POT);
+          triggerHapticAction(HAPTIC_POS_THROTTLE, 18, HAPTIC_ACTION_BURST_SPECIAL_COUNT);
           Serial.println(F("[HAPTIC] Flip mode feedback triggered"));
         }
         stickRoll = flipRoll;
         stickPitch = flipPitch;
-        stickThrottle = flipBurstThrottle;
+        stickThrottle = FLIP_BURST_THROTTLE;
         stickYaw = flipHoldYaw;
         cmd = CMD_NONE;
         sendControlPacket(stickRoll, stickPitch, stickThrottle, stickYaw, cmd, true);
@@ -450,27 +397,22 @@ void loop() {
       else if (flipRecoverRemaining > 0) {
         stickRoll = STICK_MID;
         stickPitch = STICK_MID;
-        int recoverStep = FLIP_RECOVER_PACKETS - flipRecoverRemaining;
-        int recoverDen = max(1, FLIP_RECOVER_PACKETS - 1);
-        int thrDelta = (int)flipRecoverStartThrottle - (int)flipRecoverEndThrottle;
-        int recoverThrottle = (int)flipRecoverStartThrottle - ((thrDelta * recoverStep) / recoverDen);
-        stickThrottle = (uint8_t)constrain(recoverThrottle, (int)STICK_MIN, (int)STICK_MAX);
+        stickThrottle = FLIP_RECOVER_THROTTLE;
         stickYaw = flipHoldYaw;
         cmd = CMD_NONE;
         flipRecoverRemaining--;
         if (flipRecoverRemaining == 0) {
-          flipInProgress = false;
-          flipPostHoldUntilMs = millis() + (unsigned long)(FLIP_POST_HOLD_S * 1000.0f);
+          clearFlipState();
           Serial.println(F("[FLIP] DONE"));
         }
       }
       else {
-        flipInProgress = false;
+        clearFlipState();
       }
     }
 
-    if (!flipInProgress && flightArmed && millis() < flipPostHoldUntilMs) {
-      stickThrottle = max(stickThrottle, flipPostHoldThrottle);
+    if (headlessEnabled && cmd != CMD_CALIBRATE) {
+      cmd = (uint8_t)(cmd | CMD_HEADLESS_PULSE);
     }
 
 #if ENABLE_GLOVE_NN
@@ -484,25 +426,25 @@ void loop() {
     if (nnFlipModeEnabled && flightArmed && !flipInProgress) {
       if (!nnFlipTriggerLatched) {
         if (stickRoll == STICK_MAX) {
-          startFlip("RIGHT", stickThrottle, stickYaw);
+          startFlip("RIGHT", stickYaw);
           nnFlipTriggerLatched = true;
           nnFlipModeEnabled = false;
           nnFlipModeSinceMillis = 0;
         }
         else if (stickRoll == STICK_MIN) {
-          startFlip("LEFT", stickThrottle, stickYaw);
+          startFlip("LEFT", stickYaw);
           nnFlipTriggerLatched = true;
           nnFlipModeEnabled = false;
           nnFlipModeSinceMillis = 0;
         }
         else if (stickPitch == STICK_MAX) {
-          startFlip("FORWARD", stickThrottle, stickYaw);
+          startFlip("FORWARD", stickYaw);
           nnFlipTriggerLatched = true;
           nnFlipModeEnabled = false;
           nnFlipModeSinceMillis = 0;
         }
         else if (stickPitch == STICK_MIN) {
-          startFlip("BACKWARD", stickThrottle, stickYaw);
+          startFlip("BACKWARD", stickYaw);
           nnFlipTriggerLatched = true;
           nnFlipModeEnabled = false;
           nnFlipModeSinceMillis = 0;

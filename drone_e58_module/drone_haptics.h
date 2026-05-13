@@ -30,6 +30,26 @@ inline uint16_t hapticHvStateForPosition(HapticPosition position) {
   return positions[(int)position];
 }
 
+const char* hapticAxisName(int idx) {
+  switch (idx) {
+    case 0: return "YAW";
+    case 1: return "PITCH";
+    case 2: return "ROLL";
+    case 3: return "THROTTLE";
+    default: return "UNKNOWN";
+  }
+}
+
+const char* hapticPosName(HapticPosition pos) {
+  switch (pos) {
+    case HAPTIC_POS_YAW: return "M4";
+    case HAPTIC_POS_PITCH: return "M8";
+    case HAPTIC_POS_ROLL: return "M12";
+    case HAPTIC_POS_THROTTLE: return "M20";
+    default: return "M?";
+  }
+}
+
 // -------- Haptic SPI Communication --------
 void hapticPulseClock() {
   digitalWrite(HAPTIC_CLK_PIN, HIGH);
@@ -197,26 +217,33 @@ void triggerHapticFeedback(HapticFeedback *feedback, int potValue) {
   feedback->lastTriggerMs = millis();
 }
 
-void triggerHapticAction(HapticPosition position, int potValue, int burstCount = HAPTIC_ACTION_BURST_COUNT) {
+void triggerHapticAction(HapticPosition position, int potValue, int burstCount = HAPTIC_ACTION_BURST_DEFAULT_COUNT) {
   int n = max(1, burstCount);
   hapticSendToHV2701(hapticHvStateForPosition(position));
   hapticSetPot(potValue);
   hapticStartBurst(n, HAPTIC_BURST_PULSE_MS, HAPTIC_BURST_PAUSE_MS);
-  // Reserve haptic output for action burst before continuous train resumes.
   unsigned long actionMs = (unsigned long)(n * HAPTIC_BURST_PULSE_MS) +
                            (unsigned long)(max(0, n - 1) * HAPTIC_BURST_PAUSE_MS);
   hapticActionLockUntilMs = millis() + actionMs;
+  if (hapticDebugEnabled) {
+    Serial.print(F("[HDBG] BURST pos="));
+    Serial.print(hapticPosName(position));
+    Serial.print(F(" pot="));
+    Serial.print(potValue);
+    Serial.print(F(" count="));
+    Serial.print(n);
+    Serial.print(F(" on="));
+    Serial.print(HAPTIC_BURST_PULSE_MS);
+    Serial.print(F("ms off="));
+    Serial.print(HAPTIC_BURST_PAUSE_MS);
+    Serial.print(F("ms lock="));
+    Serial.print(actionMs);
+    Serial.println(F("ms"));
+  }
 }
 
 void updateHapticFeedback(uint8_t stickYaw, uint8_t stickPitch, uint8_t stickRoll, uint8_t stickThrottle) {
-  if (flipInProgress) {
-    hapticStopPulses();
-    hapticYaw.isActive = false;
-    hapticPitch.isActive = false;
-    hapticRoll.isActive = false;
-    hapticThrottle.isActive = false;
-    return;
-  }
+  if (flipInProgress) return;
 
   unsigned long now = millis();
   if ((long)(hapticActionLockUntilMs - now) > 0) return;
@@ -255,10 +282,13 @@ void updateHapticFeedback(uint8_t stickYaw, uint8_t stickPitch, uint8_t stickRol
     hapticRoll.isActive = false;
     hapticThrottle.isActive = false;
     hapticMuxCursor = -1;
+    if (hapticDebugEnabled && hapticAnyActiveLast) {
+      Serial.println(F("[HDBG] TRAIN idle (all controls neutral)"));
+    }
+    hapticAnyActiveLast = false;
     return;
   }
 
-  // One digital potentiometer is shared, so all active channels use one intensity.
   int yawPot = hapticYaw.potMax - (int)(yawNorm * (hapticYaw.potMax - hapticYaw.potMin));
   int pitchPot = hapticPitch.potMax - (int)(pitchNorm * (hapticPitch.potMax - hapticPitch.potMin));
   int rollPot = hapticRoll.potMax - (int)(rollNorm * (hapticRoll.potMax - hapticRoll.potMin));
@@ -280,10 +310,9 @@ void updateHapticFeedback(uint8_t stickYaw, uint8_t stickPitch, uint8_t stickRol
   if (chosen < 0) return;
   hapticMuxCursor = chosen;
 
-  hapticSendToHV2701(hapticHvStateForPosition(chanPos[chosen]));
+  hapticSendToHV2701(positions[(int)chanPos[chosen]]);
   hapticSetPot((byte)constrain(chanPot[chosen], 0, 255));
 
-  // Keep train continuous while off-neutral and stop immediately when neutral.
   if (hapticPulseMode != HPM_TRAIN) {
     hapticStartTrain(HAPTIC_DEFAULT_FREQ_HZ, HAPTIC_DEFAULT_PW_US, 60000UL);
   }
@@ -306,4 +335,20 @@ void updateHapticFeedback(uint8_t stickYaw, uint8_t stickPitch, uint8_t stickRol
   hapticPitch.lastTriggerMs = now;
   hapticRoll.lastTriggerMs = now;
   hapticThrottle.lastTriggerMs = now;
+  hapticAnyActiveLast = true;
+
+  if (hapticDebugEnabled) {
+    Serial.print(F("[HDBG] TRAIN axis="));
+    Serial.print(hapticAxisName(chosen));
+    Serial.print(F(" pos="));
+    Serial.print(hapticPosName(chanPos[chosen]));
+    Serial.print(F(" pot="));
+    Serial.print(chanPot[chosen]);
+    Serial.print(F(" active=["));
+    if (yawActive) Serial.print(F("Y"));
+    if (pitchActive) Serial.print(F("P"));
+    if (rollActive) Serial.print(F("R"));
+    if (throttleActive) Serial.print(F("T"));
+    Serial.println(F("]"));
+  }
 }

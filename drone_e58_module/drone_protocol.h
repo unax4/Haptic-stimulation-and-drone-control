@@ -74,7 +74,8 @@ void sendCalibratePulse() {
 }
 
 void sendHeadlessPulse() {
-  sendControlPacket(lastStickYaw, STICK_MID, lastStickThrottle, STICK_MID, CMD_HEADLESS_PULSE);
+  // Mirrors Python: one-shot command pulse (not persistent headless byte).
+  sendControlPacket(STICK_MID, STICK_MID, lastStickThrottle, lastStickYaw, CMD_HEADLESS_PULSE);
 }
 
 bool decodeFlipDirection(const char *direction, uint8_t &outRoll, uint8_t &outPitch) {
@@ -103,7 +104,13 @@ bool decodeFlipDirection(const char *direction, uint8_t &outRoll, uint8_t &outPi
   return false;
 }
 
-void startFlip(const char *direction, uint8_t throttleSnapshot, uint8_t yawSnapshot) {
+void clearFlipState() {
+  flipInProgress = false;
+  flipBurstRemaining = 0;
+  flipRecoverRemaining = 0;
+}
+
+void startFlip(const char *direction, uint8_t yawSnapshot) {
   if (!flightArmed) {
     Serial.println(F("[FLIP] Ignored: drone not armed."));
     return;
@@ -123,12 +130,6 @@ void startFlip(const char *direction, uint8_t throttleSnapshot, uint8_t yawSnaps
   flipRoll = dirRoll;
   flipPitch = dirPitch;
   flipHoldYaw = yawSnapshot;
-  uint8_t baseThrottle = (uint8_t)constrain(max((int)throttleSnapshot, (int)FLIP_THR_MIN), (int)STICK_MIN, (int)STICK_MAX);
-  flipBurstThrottle = (uint8_t)constrain((int)baseThrottle + (int)FLIP_THR_BURST_BOOST, (int)STICK_MIN, (int)STICK_MAX);
-  flipRecoverStartThrottle = (uint8_t)constrain((int)baseThrottle + (int)FLIP_THR_RECOVER_BOOST, (int)STICK_MIN, (int)STICK_MAX);
-  flipRecoverEndThrottle = (uint8_t)constrain((int)baseThrottle + (int)FLIP_THR_POST_BOOST, (int)STICK_MIN, (int)STICK_MAX);
-  flipPostHoldThrottle = flipRecoverEndThrottle;
-  flipPostHoldUntilMs = 0;
   flipBurstRemaining = FLIP_BURST_PACKETS;
   flipRecoverRemaining = FLIP_RECOVER_PACKETS;
   flipInProgress = true;
@@ -145,13 +146,13 @@ void sendLandPacket(uint8_t yawSnapshot) {
 
   sendControlPacket(STICK_MID, STICK_MID, STICK_MIN, yawSnapshot, CMD_LAND);
   flightArmed = false;
-  flipInProgress = false;
+  clearFlipState();
   Serial.println(F("[LAND] Land packet sent"));
 }
 
 void triggerLocalRecalibration() {
   flightArmed = false;
-  flipInProgress = false;
+  clearFlipState();
 
   gyroCalibrated = false;
   flexCalibrated = false;
@@ -177,6 +178,7 @@ void triggerLocalRecalibration() {
   nnFlipModeEnabled = false;
   nnFlipTriggerLatched = false;
   nnFlipModeSinceMillis = 0;
+  nnZeroLongHoldHeadlessTriggered = false;
 #endif
 
   Serial.println(F("[CALIB] Re-calibrating, keep still..."));

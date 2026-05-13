@@ -22,16 +22,22 @@ void applyNNAction(int cls) {
   switch (cls) {
     case 1:
       flagStop = true;
+      triggerHapticAction(HAPTIC_POS_THROTTLE, 18);  // STOP: 1 burst on M20 (palm) with pot 18
+      Serial.println(F("[HAPTIC] Stop feedback triggered"));
       Serial.println(F("[NN] STOP action"));
       break;
 
     case 3:
       flagTakeoff = true;
+      triggerHapticAction(HAPTIC_POS_YAW, 20);  // TAKEOFF: 1 burst on M4 (thumb) with pot 20
+      Serial.println(F("[HAPTIC] Takeoff feedback triggered"));
       Serial.println(F("[NN] TAKEOFF action"));
       break;
 
     case 4:
       captureZero();
+      triggerHapticAction(HAPTIC_POS_ROLL, 30);  // Zero feedback on M12 at pot 30
+      Serial.println(F("[HAPTIC] Zero feedback triggered"));
       Serial.println(F("[NN] ZERO action"));
       break;
 
@@ -39,14 +45,14 @@ void applyNNAction(int cls) {
       nnFlipModeEnabled = true;
       nnFlipTriggerLatched = false;
       nnFlipModeSinceMillis = millis();
-      triggerHapticAction((HapticPosition)HAPTIC_ACTION_FLIP_ARMED_POS,
-                          HAPTIC_ACTION_FLIP_ARMED_POT,
-                          HAPTIC_FLIP_ARMED_BURST_COUNT);
+      triggerHapticAction(HAPTIC_POS_THROTTLE, 18, HAPTIC_ACTION_BURST_SPECIAL_COUNT);  // 3 bursts on M20 (palm) to indicate flip mode armed
       Serial.println(F("[NN] FLIP ARMED (one-shot)"));
       break;
 
     case 2:
       flagLand = true;
+      triggerHapticAction(HAPTIC_POS_PITCH, 25);  // LAND: 1 burst on M8 (index) with pot 25
+      Serial.println(F("[HAPTIC] Land feedback triggered"));
       Serial.println(F("[NN] LAND action"));
       break;
 
@@ -102,12 +108,14 @@ void updateNNRecognition(int rawA1, int rawA0) {
     nnLastClass = -1;
     nnClassStartMillis = 0;
     nnStablePosition = -1;
+    nnZeroLongHoldHeadlessTriggered = false;
     return;
   }
 
   if (pred != nnLastClass) {
     nnLastClass = pred;
     nnClassStartMillis = now;
+    nnZeroLongHoldHeadlessTriggered = false;
   }
 
   if (pred == 0) {
@@ -122,6 +130,22 @@ void updateNNRecognition(int rawA1, int rawA0) {
   if (now - nnClassStartMillis < NN_HOLD_MS) return;
 
   nnStablePosition = pred;
+
+  if (pred == 4 &&
+      !nnZeroLongHoldHeadlessTriggered &&
+      (now - nnClassStartMillis >= NN_ZERO_TO_HEADLESS_HOLD_MS)) {
+    headlessEnabled = !headlessEnabled;
+    if (headlessEnabled) {
+      headlessRefYawDeg = yawDeg;
+    }
+    flagHeadlessPulse = true;
+    triggerHapticAction(HAPTIC_POS_ROLL, 30, HAPTIC_ACTION_BURST_SPECIAL_COUNT);  // Headless feedback: M12, 3-burst, pot 30
+    Serial.println(F("[HAPTIC] Headless long-hold feedback triggered"));
+    nnZeroLongHoldHeadlessTriggered = true;
+    Serial.print(F("[NN] HEADLESS long-hold from ZERO -> "));
+    Serial.println(headlessEnabled ? F("ON") : F("OFF"));
+  }
+
   if (pred == nnLastActionClass) return;
   if (now - lastNNActionMillis < NN_ACTION_COOLDOWN_MS) return;
 

@@ -83,6 +83,23 @@ uint8_t angleToStick(float angle, float deadzone, float sensitivity, float expo)
   return (uint8_t)constrain((int)raw, STICK_MIN, STICK_MAX);
 }
 
+float wrapDeg180(float a) {
+  while (a > 180.0f) a -= 360.0f;
+  while (a < -180.0f) a += 360.0f;
+  return a;
+}
+
+void applyHeadlessTransform(uint8_t &stickRoll, uint8_t &stickPitch, float yawNowDeg) {
+  float relDeg = wrapDeg180(yawNowDeg - headlessRefYawDeg);
+  float th = relDeg * (float)(M_PI / 180.0);
+  float x = (float)((int)stickRoll - (int)STICK_MID);
+  float y = (float)((int)stickPitch - (int)STICK_MID);
+  float xr = x * cosf(th) - y * sinf(th);
+  float yr = x * sinf(th) + y * cosf(th);
+  stickRoll = (uint8_t)constrain((int)roundf((float)STICK_MID + xr), (int)STICK_MIN, (int)STICK_MAX);
+  stickPitch = (uint8_t)constrain((int)roundf((float)STICK_MID + yr), (int)STICK_MIN, (int)STICK_MAX);
+}
+
 float flexDeflection(int raw, int idx) {
   float delta = (float)raw - flexMean[idx];
   float thresh = FLEX_THRESH_STD_MULTIPLIER * flexStd[idx];
