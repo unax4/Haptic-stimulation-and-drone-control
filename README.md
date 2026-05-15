@@ -54,11 +54,11 @@ This project implements a haptic feedback system integrated with UAV (Unmanned A
   - `build/` & `build_noNN/` - Build artifacts (with and without neural network)
   - `Original project/` - Complete reference implementation with backend/frontend
 
-#### `drone_e58_module/`
-- **Modular Arduino Implementation for E58 with Haptic Integration**
+#### `drone_k417_module/`
+- **Modular Arduino Implementation for K417 with Haptic Integration**
 - Header files implementing modular drone control system
 - **Key components:**
-  - `drone_e58_module.ino` - Main module firmware
+  - `drone_k417_module.ino` - Main module firmware
   - `drone_ahrs.h` - AHRS (Attitude Heading Reference System) implementation
   - `drone_haptics.h` - Haptic feedback controller
   - `drone_nn.h` - Neural network inference module
@@ -91,8 +91,8 @@ This project implements a haptic feedback system integrated with UAV (Unmanned A
 ## Documentation
 
 - [Haptic Feedback System Documentation](./drone_e58_module/HAPTIC_FEEDBACK_SYSTEM_DOCUMENTATION.md)
-- [E58 WiFi Camera Protocol](./drone_e58/E58_WIFI_CAM_PROTOCOL.md)
-- [K417 WiFi Camera Protocol](./drone_k417/E58_WIFI_CAM_PROTOCOL.md)
+- [E58 WiFi Protocol](./drone_e58/E58_WIFI_CAM_PROTOCOL.md)
+- [K417 WiFi Protocol](./drone_k417/E58_WIFI_CAM_PROTOCOL.md)
 
 ## Getting Started
 
