@@ -1,0 +1,55 @@
+\begin{thebibliography}{10}
+
+\bibitem{TFG}
+Jorge Cuartero~Galindo.
+\newblock \textit{Inteligencia artificial sobre procesadores edge computing}.
+\newblock \textit{Trabajo fin de grado en F\'isica}, \textit{Universidad de
+  Zaragoza}, 2024.
+
+\bibitem{Tanaka2023}
+Y.~Tanaka, A.~Shen, A.~Kong, and P.~Lopes.
+\newblock Full-hand electro-tactile feedback without obstructing palmar side of
+  hand.
+\newblock {\em Proceedings of the 2023 CHI Conference on Human Factors in
+  Computing Systems (pp. 1-15)}, 2023.
+
+\bibitem{Arduino2040}
+{\em \textit{Arduino Nano RP2040 Conncect.} URL:
+  https://docs.arduino.cc/hardware/nano-rp2040-connect/}.
+
+\bibitem{LSM6DSOX}
+{\em \textit{Módulo LSM6DSOX.} URL:
+  https://www.st.com/en/mems-and-sensors/lsm6dsox.html}.
+
+\bibitem{LibreriaLSM6DSOX}
+{\em \textit{Librería LSM6DSOX.} URL:
+  https://github.com/arduino-libraries/Arduino\_LSM6DSOX}.
+
+\bibitem{NINA-W102}
+{\em \textit{NINA-W102.} URL:
+  https://www.u-blox.com/en/product/nina-w10-series-open-cpu}.
+
+\bibitem{Flex-Sensor}
+{\em \textit{Flex-Sensor.} URL:
+  https://www.spectrasymbol.com/resistive-flex-sensors/spectraflex-flex-sensors}.
+
+\bibitem{Mahony2008}
+Robert Mahony, Tarek Hamel, and Jean-Michel Pflimlin.
+\newblock Nonlinear complementary filters on the special orthogonal group.
+\newblock {\em IEEE Transactions on Automatic Control}, 2008.
+
+\bibitem{TensorFlow}
+{\em \textit{TensorFlow.} URL: https://www.tensorflow.org/?hl=es}.
+
+\bibitem{OneHot}
+{\em One-hot encoding. URL:
+  https://medium.com/thedeephub/one-hot-encoding-with-tensorflowand-keras-569cfa91b162}.
+
+\bibitem{TFLite}
+{\em \textit{TensorFlow Lite.} URL: https://www.tensorflow.org/lite/}.
+
+\bibitem{Eloquent}
+{\em \textit{Librería eloquentarduino.} URL:
+  https://github.com/eloquentarduino}.
+
+\end{thebibliography}

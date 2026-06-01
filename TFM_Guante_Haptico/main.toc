@@ -1,0 +1,47 @@
+\babel@toc {spanish}{}\relax 
+\contentsline {section}{Agradecimientos}{\es@scroman {i}}{section*.2}%
+\contentsline {section}{Lista de Figuras}{\es@scroman {ii}}{section*.2}%
+\contentsline {section}{Lista de Tablas}{\es@scroman {iii}}{section*.2}%
+\contentsline {section}{Lista de Acrónimos}{\es@scroman {iii}}{section*.3}%
+\contentsline {section}{\numberline {1}Introducción}{1}{section.1}%
+\contentsline {section}{\numberline {2}Generación de sensación táctil en la zona palmar de la mano}{2}{section.2}%
+\contentsline {paragraph}{Desafío 1: Selección del punto de estimulación anatómica:}{2}{paragraph*.4}%
+\contentsline {paragraph}{Desafío 2: Profundidad de penetración de la corriente}{2}{paragraph*.5}%
+\contentsline {paragraph}{Desafío 3: Asimetría sensorial y umbrales de estimulación}{3}{paragraph*.7}%
+\contentsline {paragraph}{Desafío 4: Focalización de la sensación y polaridad}{3}{paragraph*.8}%
+\contentsline {paragraph}{Desafío 5: Mitigación de interferencias inter-digitales}{3}{paragraph*.10}%
+\contentsline {section}{\numberline {3}Interfaz hardware}{5}{section.3}%
+\contentsline {subsection}{\numberline {3.1}Arduino Nano RP2040 Connect}{5}{subsection.3.1}%
+\contentsline {subsubsection}{\numberline {3.1.1}Módulo LSM6DSOXTR}{5}{subsubsection.3.1.1}%
+\contentsline {subsubsection}{\numberline {3.1.2}Módulo de conectividad inalámbrica NINA-W102}{6}{subsubsection.3.1.2}%
+\contentsline {subsection}{\numberline {3.2}Sistema de adquisición de posiciones de la mano}{6}{subsection.3.2}%
+\contentsline {subsection}{\numberline {3.3}Circuito de estimulación electrotáctil}{7}{subsection.3.3}%
+\contentsline {section}{\numberline {4}Procesamiento de datos: orientación espacial}{10}{section.4}%
+\contentsline {subsection}{\numberline {4.1}Representación de la orientación: cuaterniones}{10}{subsection.4.1}%
+\contentsline {subsection}{\numberline {4.2}Fusión de acelerómetro y giroscopio}{10}{subsection.4.2}%
+\contentsline {subsection}{\numberline {4.3}Controlador PI y corrección del bias}{11}{subsection.4.3}%
+\contentsline {subsection}{\numberline {4.4}Calibración inicial y recentrado dinámico}{12}{subsection.4.4}%
+\contentsline {section}{\numberline {5}Procesamiento de datos: flexión de los dedos}{13}{section.5}%
+\contentsline {subsection}{\numberline {5.1}Dataset}{13}{subsection.5.1}%
+\contentsline {subsubsection}{\numberline {5.1.1}\textit {One-hot encoding}}{15}{subsubsection.5.1.1}%
+\contentsline {subsection}{\numberline {5.2}Entrenamiento y selección de la arquitectura}{15}{subsection.5.2}%
+\contentsline {subsection}{\numberline {5.3}Compresión e integración con TensorFlow Lite}{16}{subsection.5.3}%
+\contentsline {section}{\numberline {6}Estudio de percepción de sensación táctil}{17}{section.6}%
+\contentsline {subsection}{\numberline {6.1}Caracterización de la curva de corriente}{17}{subsection.6.1}%
+\contentsline {subsection}{\numberline {6.2}Linealización y regresión}{17}{subsection.6.2}%
+\contentsline {subsection}{\numberline {6.3}Estudio perceptivo}{19}{subsection.6.3}%
+\contentsline {subsubsection}{\numberline {6.3.1}Protocolo experimental}{19}{subsubsection.6.3.1}%
+\contentsline {subsubsection}{\numberline {6.3.2}Resultados}{19}{subsubsection.6.3.2}%
+\contentsline {section}{\numberline {7}Aplicación del sistema: control de un dron con feedback háptico}{21}{section.7}%
+\contentsline {subsection}{\numberline {7.1}Protocolo WiFi de control del dron}{21}{subsection.7.1}%
+\contentsline {subsection}{\numberline {7.2}Bucle de control}{22}{subsection.7.2}%
+\contentsline {paragraph}{Estimación de orientación.}{24}{paragraph*.29}%
+\contentsline {paragraph}{Mapeo de orientación a ejes de vuelo.}{24}{paragraph*.30}%
+\contentsline {paragraph}{Control del acelerador mediante sensores de flexión.}{24}{paragraph*.31}%
+\contentsline {paragraph}{Reconocimiento gestual y comandos discretos.}{24}{paragraph*.32}%
+\contentsline {subsection}{\numberline {7.3}Secuencia de acrobacia}{24}{subsection.7.3}%
+\contentsline {subsection}{\numberline {7.4}Retroalimentación háptica durante el vuelo}{25}{subsection.7.4}%
+\contentsline {section}{\numberline {8}Conclusiones y trabajo futuro}{27}{section.8}%
+\contentsline {section}{Bibliografía}{28}{section.8}%
+\contentsline {section}{\numberline {A}Repositorio de Git-Hub}{\es@scroman {i}}{section.1.A}%
+\contentsline {section}{\numberline {B}GUI de control del dron}{\es@scroman {ii}}{section.1.B}%

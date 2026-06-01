@@ -1,0 +1,18 @@
+\babel@toc {spanish}{}\relax 
+\contentsline {figure}{\numberline {2.1}{\ignorespaces Diferencia de agrupación nerviosa}}{2}{figure.caption.6}%
+\contentsline {figure}{\numberline {2.2}{\ignorespaces Asimetría de umbrales en la mano}}{3}{figure.caption.9}%
+\contentsline {figure}{\numberline {2.3}{\ignorespaces Configuración final del sistema háptico}}{4}{figure.caption.11}%
+\contentsline {figure}{\numberline {3.1}{\ignorespaces Montaje final del sistema háptico}}{5}{figure.caption.12}%
+\contentsline {figure}{\numberline {3.2}{\ignorespaces Esquema del circuito de estimulación electrotáctil diseñado para el guante.}}{7}{figure.caption.13}%
+\contentsline {figure}{\numberline {3.3}{\ignorespaces Diseño final de la PCB del circuito de estimulación electrotáctil desarrollado en KiCad y resultado final una vez se recibió de la fábrica. Agradecimientos a Diego Antolín por su ayuda con el diseño y a Óscar Lasarte por montar la placa.}}{9}{figure.caption.14}%
+\contentsline {figure}{\numberline {5.1}{\ignorespaces Arquitectura de red neuronal \textit {fully connected}}}{13}{figure.caption.15}%
+\contentsline {figure}{\numberline {5.2}{\ignorespaces Posiciones definidas para el \textit {dataset}}}{14}{figure.caption.16}%
+\contentsline {figure}{\numberline {5.3}{\ignorespaces Distribución del \textit {dataset} por posición}}{14}{figure.caption.17}%
+\contentsline {figure}{\numberline {5.4}{\ignorespaces Distribución de valores ADC por posición}}{14}{figure.caption.18}%
+\contentsline {figure}{\numberline {5.5}{\ignorespaces Funciones de activación}}{15}{figure.caption.19}%
+\contentsline {figure}{\numberline {5.6}{\ignorespaces Evolución de la precisión con el tamaño de la primera capa oculta}}{15}{figure.caption.20}%
+\contentsline {figure}{\numberline {5.7}{\ignorespaces Arquitectura final de la red neuronal}}{16}{figure.caption.21}%
+\contentsline {figure}{\numberline {6.1}{\ignorespaces Curva de corriente en función del valor del potenciómetro}}{18}{figure.caption.22}%
+\contentsline {figure}{\numberline {6.2}{\ignorespaces Regresión lineal sobre la curva linealizada}}{18}{figure.caption.23}%
+\contentsline {figure}{\numberline {7.1}{\ignorespaces Diagrama de flujo del bucle de control embebido ejecutado a 40~Hz.}}{23}{figure.caption.28}%
+\contentsline {figure}{\numberline {7.2}{\ignorespaces Distribución de las cuatro zonas de retroalimentación háptica sobre el dorso de la mano para el control del dron.}}{26}{figure.caption.35}%
