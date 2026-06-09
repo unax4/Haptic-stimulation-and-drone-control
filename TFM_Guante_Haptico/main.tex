@@ -5,17 +5,20 @@
 \usepackage{framed}
 \usepackage{graphicx}
 \usepackage{afterpage}
-\usepackage[spanish]{babel}
+\usepackage[spanish,es-nodecimaldot]{babel}
 \usepackage[utf8]{inputenc}
 \usepackage{titlesec}
 \usepackage{colortbl}
 \usepackage{xcolor}
 \usepackage{cite}
-
+\usepackage{booktabs}
+\usepackage{tabularx}
 \usepackage{enumerate}
 \usepackage{multirow}
 \usepackage{graphics}
 \usepackage{appendix}
+\usepackage{colortbl}
+\definecolor{rowgray}{gray}{0.93}
 \usepackage[nottoc]{tocbibind}
 \addto\captionsspanish{
   \renewcommand{\refname}{Bibliografía}
@@ -85,7 +88,7 @@
   \def\acknowledgmentsname{Agradecimientos}
 }
 % --- Configuración de Acrónimos ---
-\usepackage[acronym, toc, section=section]{glossaries} 
+\usepackage[acronym, nomain, toc, section=section]{glossaries} 
 \makeglossaries
 
 % Definición acronimos
@@ -95,6 +98,12 @@
 \newacronym{tfg}{TFG}{Trabajo Fin de Grado}
 \newacronym{adc}{ADC}{Analog to Digital Converter}
 \newacronym{dac}{DAC}{Digital to Analog Converter}
+\newacronym{lsb}{LSB}{Least Significant Byte}
+\newacronym{udp}{UDP}{User Datagram Protocol}
+\newacronym{spi}{SPI}{Serial Peripheral Interface}
+\newacronym{sram}{SRAM}{Static Random-Access Memory}
+\newacronym{fet}{FET}{Field-Effect Transistor}
+\newacronym{bjt}{BJT}{Bipolar Junction Transistor}
 
 \begin{document}
 \definecolor{light-gray}{gray}{0.87}  
@@ -170,11 +179,12 @@ Departamento de Ingeniería Electronica y Comunicaciones\\
 \addcontentsline{toc}{section}{\acknowledgmentsname}
 \section*{\acknowledgmentsname} 
 
-Especial gracias a MI por creer en MI y constantemente apoyar a MI. Sin MI jamas podria haber hecho todo esto.
+Gracias a la Agencia Estatal de Investigación, Ministerio de Ciencia e Innovación, con número de proyecto PID2022-138785OB-I00 (MCIN/AEI/10.13039/501100011033/FEDER, UE) por financiar los componentes necesarios para el desarrollo de este trabajo.
+
+Asi mismo, gracias a mis directores del trabajo, Nicolás y Belén, por su apoyo, paciencia y guía durante todo el proceso de desarrollo de este trabajo. Y en especial, gracias a Oscar Lasarte por su indispensable ayuda en todo el montaje de la instrumentación y por todas las reparaciones que han sido necesarias a lo largo del proceso.
 
 \listoffigures        % Índice de figuras
 \listoftables         % Índice de tablas
-
 
 \printglossary[type=\acronymtype, title={Lista de Acrónimos}]
 \clearpage
@@ -191,28 +201,28 @@ Especial gracias a MI por creer en MI y constantemente apoyar a MI. Sin MI jamas
 %------------------ CONTENIDO ------------------
 \section{Introducción}
 
-La progresiva miniaturización de la electrónica y el aumento de la capacidad de procesamiento en sistemas embebidos han impulsado el desarrollo de nuevas formas de interacción entre humanos y dispositivos tecnológicos. En particular, las interfaces hápticas han cobrado especial relevancia en los últimos años, al permitir añadir el sentido del tacto como canal de comunicación con sistemas digitales, complementando los tradicionales estímulos visuales y auditivos. Esta tendencia resulta especialmente interesante en aplicaciones de realidad virtual, teleoperación, asistencia a la discapacidad y control gestual avanzado.
+La progresiva miniaturización de la electrónica y el aumento de la capacidad de procesamiento en sistemas embebidos han impulsado el desarrollo de nuevas formas de interacción entre humanos y dispositivos tecnológicos. En particular, las interfaces hápticas han cobrado especial relevancia en los últimos años, al permitir añadir el sentido del tacto como canal de comunicación con sistemas digitales, complementando los tradicionales estímulos visuales y auditivos. Esta tendencia resulta especialmente interesante en aplicaciones de realidad virtual, teleoperación y asistencia a la discapacidad.
 
-Dentro de este marco, el presente Trabajo Fin de Máster se plantea como una continuación directa del Trabajo Fin de Grado llevado a cabo por Jorge Cuartero \cite{TFG}, en el que se abordó una primera aproximación al uso de sistemas vestibles para la captura del movimiento de la mano y su utilización como interfaz de control remoto mediante un \textit{dataglove}. A partir de esa base inicial, el objetivo actual consiste en avanzar hacia una integración más completa del sistema, incorporando retroalimentación háptica mediante estimulación electrotáctil y mejorando tanto el procesamiento embebido como la conectividad inalámbrica del dispositivo.
+Dentro de este marco, el presente Trabajo Fin de Máster se plantea como una continuación directa del Trabajo Fin de Grado llevado a cabo por Jorge Cuartero \cite{TFG}, en el que se abordó una primera aproximación al uso de sistemas vestibles para la captura del movimiento de la mano y su utilización como interfaz de control remoto mediante un \textit{dataglove}. A partir de esa base inicial, el objetivo actual consiste en avanzar hacia una integración más completa del sistema, incorporando un sistema háptico de estimulación electrotáctil y mejorando tanto el procesamiento embebido como la conectividad inalámbrica del dispositivo.
 
-El núcleo del desarrollo se centra en un guante háptico capaz de combinar adquisición de movimiento, procesamiento local de datos y generación de sensaciones táctiles en la mano del usuario. Para ello se emplea un microcontrolador con capacidad de comunicación inalámbrica, una unidad de medida inercial (\gls{imu}) para la estimación de la orientación espacial y un sistema de estimulación eléctrica diseñado para generar sensaciones referidas en la zona palmar sin obstaculizar la manipulación natural de objetos. Así, se consigue mantener funcionalidad manual a la misma vez que se introduce un canal adicional de información sensorial.
+El núcleo del desarrollo se centra en construir un único guante vestible que sea capaz de combinar adquisición de movimiento, procesamiento local de datos y generación de sensaciones táctiles en la mano del usuario. Para ello se emplea un microcontrolador con capacidad de comunicación inalámbrica, una unidad de medida inercial (\gls{imu}) para la estimación de la orientación espacial y un sistema de estimulación eléctrica diseñado para generar sensaciones referidas en la zona palmar sin obstaculizar la manipulación natural de objetos. Así, se consigue mantener funcionalidad manual a la misma vez que se introduce un canal adicional de información sensorial.
 
 El sistema resultante pretende servir como plataforma experimental para el estudio de interfaces hápticas portables y su aplicación a tareas de control e interacción virtual. La combinación de procesamiento embebido, adquisición sensorial y estimulación táctil en un único dispositivo portátil abre la puerta a interfaces más naturales, compactas y eficientes, donde parte del procesamiento se realiza localmente, reduciendo latencias y mejorando la autonomía del sistema.
 
-A lo largo de la memoria, primeramente, se presenta el fundamento del sistema de estimulación electrotáctil y los criterios de diseño adoptados para lograr sensaciones localizadas en la mano. Después se describe el hardware del dispositivo, incluyendo el microcontrolador, la instrumentación sensorial y la electrónica necesaria. A continuación, se detalla el procesamiento de los datos de orientación y la integración de la información adquirida, junto con la caracterización experimental del sistema háptico. Finalmente, como aplicación del trabajo, se implementa el guante como un sustituto del mando de control de un dron, usando la comunicación inalámbrica brindada por el microcontrolador y empleando la parte háptica como un canal de información para conocer la telemetría del dron sin usar pantallas. Para concluir, se entabla una discusión de las limitaciones actuales y posibles líneas futuras de desarrollo.
+A lo largo de la memoria, primeramente, se presenta el fundamento del sistema de estimulación electrotáctil y los criterios de diseño adoptados para lograr sensaciones localizadas en la mano. Después se describe el hardware del dispositivo, incluyendo el microcontrolador y demás electrónica necesaria. A continuación, se detalla el procesamiento de los datos de orientación y la integración de la información adquirida, junto con la caracterización experimental del sistema háptico. Finalmente, como aplicación del trabajo, se implementa el guante como un sustituto del mando de control de un dron, usando la comunicación inalámbrica brindada por el microcontrolador y empleando la parte háptica como un canal de información para conocer la telemetría del dron sin usar pantallas. Para concluir, se entabla una discusión de las limitaciones actuales y posibles líneas futuras de desarrollo.
 
 
 \section{Generación de sensación táctil en la zona palmar de la mano}
 
-Para poder crear sensación táctil en la mano, el objetivo es estimular los nervios que la atraviesan con una corriente determinada. Tanaka et al. \cite{Tanaka2023} diseñaron este sistema tratando de generar estas sensaciones en la zona palmar de la mano sin obstruir la misma, preservando así la destreza manual y la capacidad de interactuar con objetos físicos. Para lograrlo, se emplea una técnica basada en \textit{sensaciones referidas}, donde la estimulación eléctrica aplicada en una zona (el dorso de la mano) provoca percepciones somatosensoriales en una zona distal (la palma).
+Para poder crear sensación táctil en la mano, el objetivo es estimular los nervios que la atraviesan con una corriente determinada. Tanaka et al. \cite{Tanaka2023} diseñaron este sistema tratando de generar estas sensaciones en la zona palmar de la mano sin obstruir la misma, preservando así la destreza manual y la capacidad de interactuar con objetos físicos. Para lograrlo, se emplea una técnica basada en \textit{sensaciones referidas}, donde la estimulación eléctrica aplicada en una zona (el dorso de la mano) provoca percepciones somatosensoriales en una zona distal (la zona palmar).
 
-A continuación, se describen los cinco desafíos técnicos identificados en la literatura analizada y las soluciones de diseño implementadas para alcanzar una estimulación precisa en 11 puntos de la zona palmar.
+A continuación, se describen los cinco desafíos técnicos identificados en la literatura analizada y las soluciones de diseño implementadas para alcanzar una estimulación precisa en 10 puntos de la zona palmar.
 
 \paragraph{Desafío 1: Selección del punto de estimulación anatómica:} 
 
-Aunque los nervios mediano y cubital recorren el antebrazo y la muñeca, la estimulación en estos puntos se ve limitado debido a que los nervios se encuentran agrupados o empaquetados. Esto impide la activación selectiva de dedos individuales sin generar interferencias entre ellos. 
+Aunque los nervios mediano y cubital recorren el antebrazo y la muñeca, la estimulación en estos puntos se ve limitada debido a que los nervios se encuentran agrupados o empaquetados. Esto impide la activación selectiva de dedos individuales sin generar interferencias entre ellos. 
 
-Se optó por situar los electrodos en el dorso de la mano, ya que tras cruzar la muñeca, los nervios digitales se ramifican hacia cada dedo de forma independiente, haciendo posible un control individualizado. Esta diferencia anatómica en la distribución de los nervios se ilustra en la Figura~\ref{fig:nervios_dorso}.
+Se optó por situar los electrodos en el dorso de la mano, ya que tras cruzar la muñeca, los nervios digitales se ramifican hacia cada dedo de forma independiente, haciendo posible un control individualizado de cada uno de ellos. Esta diferencia anatómica en la distribución de los nervios se ilustra en la Figura~\ref{fig:nervios_dorso}.
 
 
 \paragraph{Desafío 2: Profundidad de penetración de la corriente}
@@ -221,19 +231,19 @@ Una disposición convencional de electrodos (ánodo y cátodo próximos sobre el
 \begin{figure}[htbp]
     \centering
     \includegraphics[width=0.8\textwidth]{Imagenes/nervios.png}
-    \caption[Diferencia de agrupación nerviosa]{Diferencia entre la agrupación nerviosa en la muñeca y la ramificación en el dorso de la mano para la estimulación individual de dedos. Adaptado de \cite{Tanaka2023}.}
+    \caption[Diferencia de agrupación nerviosa]{Ramificación en el dorso de la mano para la estimulación individual de dedos (a) y explicación esquemática de la elección de diseño de usar una distancia inter-electrodo grande (b y c). Adaptado de \cite{Tanaka2023}.}
     \label{fig:nervios_dorso}
 \end{figure}
 
 \paragraph{Desafío 3: Asimetría sensorial y umbrales de estimulación}
-La estimulación desde el dorso activa teóricamente tanto la zona dorsal como la palmar, lo que podría generar sensaciones confusas. Para resolver este conflicto, se aprovecha la diferencia entre número de neuronas que tienen las distintas partes de la mano: la zona palmar posee aproximadamente 18,000 mecanorreceptores, frente a solo 300 en la zona dorsal. 
+Según la teoría, la estimulación desde el dorso activa tanto la zona dorsal como la palmar, lo que generaría sensaciones confusas. Para resolver este conflicto, se aprovecha la diferencia entre número de neuronas que tienen las distintas partes de la mano: la zona palmar posee aproximadamente 18,000 mecanorreceptores, frente a solo 300 en la zona dorsal. 
 
 Aprovechando esta diferencia, al calibrar la intensidad de la corriente, es posible superar el umbral de percepción palmar manteniéndose por debajo del umbral dorsal, haciendo que la sensación en la palma sea la única percibida por el usuario (ver Figura~\ref{fig:umbrales_sensibilidad}).
 
 \paragraph{Desafío 4: Focalización de la sensación y polaridad}
 Se observó que los electrodos situados en el dorso de los dedos generan sensaciones desplazadas (\textit{offset}) respecto a la ubicación deseada en la palma; específicamente, no lograban estimular las falanges distales. 
 
-La solución implementada consistió en la manipulación de la polaridad. Mientras que la estimulación anódica es el estándar, se implementó una inversión a estimulación catódica para los electrodos de las falanges distales. Esto permite adelantar la ubicación de la sensación hacia la punta de los dedos, permitiendo la estimulación precisa del pulpejo desde el dorso.
+La solución implementada consistió en invertir la polaridad. Mientras que la estimulación anódica es el estándar, se implementó estimulación catódica para los electrodos de las falanges distales. Asi, se podría adelantar la ubicación de la sensación hacia la punta de los dedos, permitiendo la estimulación del pulpejo desde el dorso.
 
 \begin{figure}[htbp]
     \centering
@@ -245,19 +255,19 @@ La solución implementada consistió en la manipulación de la polaridad. Mientr
 \paragraph{Desafío 5: Mitigación de interferencias inter-digitales}
 Debido a que el nervio mediano inerva los dedos pulgar, índice y medio, mientras que el nervio cubital (ulnar) inerva el anular y meñique, el uso de un único electrodo de tierra general provocaba sensaciones referidas no deseadas en dedos adyacentes. 
 
-El diseño final solventa este problema mediante el uso de dos electrodos de tierra independientes, uno para cada nervio. Al conmutar el flujo de corriente hacia la tierra correspondiente según el dedo objetivo, se logra una selectividad total, resultando en un sistema capaz de generar sensaciones en 11 puntos diferenciados de la mano sin obstrucción palmar alguna, tal como se detalla en el esquema de la Figura~\ref{fig:disposicion_electrodos}.
+El diseño final soluciona este problema mediante el uso de dos electrodos de tierra independientes, uno para cada nervio. Al conmutar el flujo de corriente hacia la tierra correspondiente según el dedo objetivo, se logra una selectividad total, resultando en un sistema capaz de generar sensaciones en un total de 10 electrodos colocados en la mano (más los dos de tierra) sin obstrucción palmar alguna, tal como se detalla en el esquema de la Figura~\ref{fig:disposicion_electrodos}.
 
 \begin{figure}[htbp]
     \centering
     \includegraphics[width=0.8\textwidth]{Imagenes/disposicionfinal.png}
-    \caption[Configuración final del sistema háptico]{Configuración final de electrodos con doble toma de tierra para evitar interferencias entre los nervios mediano y cubital.}
+    \caption[Configuración final del sistema háptico]{Configuración final de electrodos con doble toma de tierra para evitar interferencias entre los nervios mediano y cubital. Adaptado de \cite{Tanaka2023}.}
     \label{fig:disposicion_electrodos}
 \end{figure}
 
 
 \section{Interfaz hardware}
 
-El sistema completo para poder llevar a cabo el objetivo propuesto se monta en un guante, que se muestra en la Figura \ref{fig:montaje_completo}. Se distinguen los siguientes componentes: en cada dedo, del anular al meñique, sujetas por unas pequeñas piezas, fijamos bandas piezorresistivas que nos permitirán determinar su flexión. En la parte inferior se encuentra la PCB, capaz generar corrientes controladas por voltaje y programadas mediante un potenciometro digital. En la parte inferior de la placa, se encuentran los conectores hembra donde se introducen los electrodos conectados a la mano. La información proporcionada por las bandas se introduce en un Raspberry RP2040 Connect, alojado en una caja central fijada a la muñeca. A la misma vez, este dispositivo se encarga de la generación de señales eléctricas que pasan por la PCB.
+El sistema completo para poder llevar a cabo el objetivo propuesto se monta en un guante, que se muestra en la Figura \ref{fig:montaje_completo}. Se distinguen los siguientes componentes: en cada dedo, del anular al meñique, sujetas por unas pequeñas piezas, fijamos bandas piezorresistivas que nos permitirán determinar su flexión. En la parte inferior se encuentra la \gls{pcb}, capaz generar corrientes controladas por voltaje y programadas mediante un potenciometro digital. En la parte inferior de la placa, se encuentran los conectores hembra donde se introducen los electrodos conectados a la mano. La información proporcionada por las bandas se introduce en un Raspberry RP2040 Connect, alojado en una caja central fijada a la muñeca. A la misma vez, este dispositivo se encarga de la generación de señales eléctricas que pasan por la \gls{pcb}.
 
 \begin{figure}[htbp]
     \centering
@@ -268,14 +278,14 @@ El sistema completo para poder llevar a cabo el objetivo propuesto se monta en u
 
 
 \subsection{Arduino Nano RP2040 Connect}
-El microcontrolador usado para el trabajo será un módulo Arduino RP2040 Connect \cite{Arduino2040}, que incorpora un microcontrolador Raspberry Pi Pic. Este controlador proporciona una gran potencia de cálculo, un factor que será relevante en el procesamiento de datos que se llevará a cabo para la estimación de la orientación. Además tiene un modulo wifi, que se usará para la comunicación en la interfaz de control en la sección \ref{sec:dron}.
+El microcontrolador usado para el trabajo será un módulo Arduino RP2040 Connect \cite{Arduino2040}, que incorpora un microcontrolador Raspberry Pi Pic. Este controlador proporciona una gran potencia de cálculo, un factor que será relevante en el procesamiento de datos que se llevará a cabo para la estimación de la orientación. Además tiene un modulo Wifi, que se usará para la comunicación en la interfaz de control en la sección \ref{sec:dron}.
 
-En cuanto a las especificaciones generales, el RP2040 Connect opera a 3.3 V. Consta de un microcontrolador Raspberry Pi Pico (133 MHz de reloj, 256 kB de memoria SRAM) con 8 entradas analógicas (configuradas como convertidores analógico-digitales o  \gls{adc}, de las que 4 estarían destinadas a la adquisición de las posiciones de los dedos. Cuenta además con una \gls{imu} de 6 ejes, modelo LSM6DSOXTR \cite{LSM6DSOX}.
+En cuanto a las especificaciones generales, el RP2040 Connect opera a 3.3 V. Consta de un microcontrolador Raspberry Pi Pico (133 MHz de reloj, 256 kB de memoria \gls{sram}) con 8 entradas analógicas (configuradas como convertidores analógico-digitales o  \gls{adc}, de las que 4 estarían destinadas a la adquisición de las posiciones de los dedos. Cuenta además con una \gls{imu} de 6 ejes, modelo LSM6DSOXTR \cite{LSM6DSOX}.
 \
 
 \subsubsection{Módulo LSM6DSOXTR}
 
-Este módulo \cite{LSM6DSOX} consta de un acelerómetro y un giróscopo, proporcionando así información de 6 ejes (3 de aceleración y 3 de rotación espacial). Aunque ambos pueden operar a distintos fondos de escala y resoluciones, la librería utilizada (Arduino\_LSM6DSOX \cite{LibreriaLSM6DSOX}) viene configurada con una sensibilidad de 0.122 mg/LSB (siendo g la aceleración de la gravedad y LSB el bit menos significativo o Least Significant Bit) para el acelerómetro y una sensibilidad de 0.07 dps/LSB para el giróscopo (donde dps son Degrees per second, grados por segundo), valores adecuados para nuestra aplicación
+Este módulo \cite{LSM6DSOX} consta de un acelerómetro y un giróscopo, proporcionando así información de 6 ejes (3 de aceleración y 3 de rotación espacial). Aunque ambos pueden operar a distintos fondos de escala y resoluciones, la librería utilizada (Arduino\_LSM6DSOX \cite{LibreriaLSM6DSOX}) viene configurada con una sensibilidad de 0.122 mg/LSB (siendo g la aceleración de la gravedad y \gls{lsb} el bit menos significativo) para el acelerómetro y una sensibilidad de 0.07 dps/LSB para el giróscopo (donde dps son Degrees per second, grados por segundo), valores adecuados para nuestra aplicación
 (menores que el propio ruido). Esta librería dispone de dos funciones, una encargada de devolver 3 valores en representación de punto flotante para los tres ejes de la aceleración, y la otra de devolver los 3 valores referentes a la velocidad de rotación en cada eje en el mismo formato.
 
 La frecuencia de medida está fijada en 104 Hz de manera predeterminada por la librería LSM6DSOX. Aunque una alta frecuencia de muestreo era importante para la estimación de la orientación mediante integración del giroscopio \cite{TFG}, para el método que se utilizará en este trabajo con esta tasa de muestreo se obtendrá un resultado que no se verá limitado por este valor. De todos modos, con esta configuración un ciclo de medida y procesado de nuestro Arduino no podrá durar más de 10  para que no se solapen medidas de la \gls{imu}, forzando a optimizar los tiempos de cada parte del procesado.
@@ -284,11 +294,10 @@ La frecuencia de medida está fijada en 104 Hz de manera predeterminada por la l
 
 La comunicación inalámbrica del guante se implementa a través del módulo u-blox NINA-W102 \cite{NINA-W102}, integrado directamente en la placa Arduino Nano RP2040 Connect. Su arquitectura interna aloja un microprocesador de doble núcleo ESP32 dedicado en exclusiva a la gestión de la pila de protocolos de red, lo que descarga completamente al procesador principal RP2040 de esta tarea y preserva su capacidad de cómputo para el procesamiento de la \gls{imu}, la lógica de control y el sistema háptico.
 
-El módulo soporta tanto \gls{ble} como Wi-Fi (802.11 b/g/n a 2.4~GHz). Para este diseño se ha optado por Wi-Fi, ya que el volumen de datos a transmitir (orientación de la \gls{imu} más flexión de los cuatro dedos en tiempo real) exige un ancho de banda que \gls{ble} no puede garantizar sin introducir retardos
-en el lazo de control con el entorno virtual, a parte de qué usar Wi-Fi será imprescindible debido a las caracteristicas del dron que se operará en la sección \ref{sec:dron}.
+El módulo soporta tanto \gls{ble} como Wi-Fi (802.11 b/g/n a 2.4~GHz). Para este diseño se ha optado por Wi-Fi, ya que el volumen de datos a transmitir y el procesamiento extra del sistema, exige un ancho de banda que \gls{ble} no puede garantizar sin introducir retardos en el lazo de control con el entorno virtual, a parte de qué usar Wi-Fi será imprescindible debido a las caracteristicas del dron que se operará en la sección \ref{sec:dron}.
 
 \subsection{Sistema de adquisición de posiciones de la mano}
-El sistema de determinación de la flexión de los dedos se basa en las bandas piezorresistivas antes mencionadas. Una piezorresistencia es un material o componente que, bajo un esfuerzo mecánico, sufre un cambio en su resistividad. En nuestro caso se usarán los Flex Sensor de Spectra Symbol \cite{Flex-Sensor}, caracterizados por valores nominales entre 7 kΩ y 13 kΩ en reposo, de forma que al ser dobladas, como mínimo duplican su valor resistivo. Como el Arduino no puede medir directamente resistencias, en \cite{TFG} se implementó un circuito auxiliar que permite traducir estos cambios en tensión.
+El sistema de determinación de la flexión de los dedos se basa en las bandas piezorresistivas antes mencionadas. Una piezorresistencia es un material o componente que, bajo un esfuerzo mecánico, sufre un cambio en su resistividad. En nuestro caso se usarán los Flex Sensor de Spectra Symbol \cite{Flex-Sensor}, caracterizados por valores nominales entre $7\,\mathrm{k\Omega}$ y $13\,\mathrm{k\Omega}$ en reposo, de forma que al ser dobladas, como mínimo duplican su valor resistivo. Como el Arduino no puede medir directamente resistencias, en \cite{TFG} se implementó un circuito auxiliar que permite traducir estos cambios en tensión.
 
 Este circuito consiste en un divisor resistivo formado por una resistencia fija ($R_{\text{fija}}$) en serie con el elemento piezorresistivo ($R_{\text{piezo}}$), alimentado a los 3.3~V proporcionados por el propio microcontrolador. De este modo, las variaciones de resistencia de los sensores se transforman en variaciones de voltaje según la relación:
 
@@ -319,28 +328,28 @@ Además, según el sistema de electrodos descrito en la sección 2, debe poder c
     \label{fig:circuito_estimulacion}
 \end{figure}
 
-A diferencia de los diseños previos de la literatura que dependían de reguladores elevadores intermedios y baterías de baja tensión \cite{Tanaka2023}, este circuito se alimenta directamente a través de la batería de 7.4~V con una capacidad de almacenamiento de energía de 1000 mAh conectada al pin $V_{\text{in}}$ del Arduino Nano RP2040 Connect, colocando en el cable que sale a alimentar el sistema un regulador a 5 V constantes. Para la etapa de estimulación, la generación de la alta tensión de 72~V se confía a un convertidor DC-DC modelo NMT0572SC, el cual se alimenta con esta salida regulada de 5~V.
+Así, este circuito se alimenta directamente a través de la batería de 7.4~V con una capacidad de almacenamiento de energía de 1000 mAh conectada al pin $V_{\text{in}}$ del Arduino Nano RP2040 Connect, colocando en el cable que sale a alimentar el sistema un regulador a 5 V constantes. Para la etapa de estimulación, la generación de la alta tensión de 72~V se confía a un convertidor DC-DC modelo NMT0572SC, el cual se alimenta con esta salida regulada de 5~V.
 
-Como este microcontrolador no tiene una salida \gls{dac}, para controlar de manera precisa la intensidad de los impulsos electrotáctiles y adaptarla a los umbrales sensitivos del usuario, se ha sustituido el potenciómetro analógico manual por un potenciómetro digital MAX5413. El microcontrolador gobierna este dispositivo mediante un protocolo basado en SPI, optimizando el uso de pines al compartir las líneas de datos DIN y de reloj CLK con el circuito integrado de conmutación de alta tensión HV2701, requiriendo únicamente una línea adicional para la selección de chip el potenciometro (CS*). La señal digital del microcontrolador se hace pasar por este potenciómetro y se introduce en un amplificador operacional LMV341 conectado a un FET BSS87, configurando una fuente de corriente controlada por voltaje para independizar la señal de la carga. Acto seguido, un espejo de corriente basado en transistores bipolares BJT FCX705 replica esta corriente de referencia y la transfiere hacia la línea de alta tensión (72~V), asegurando un flujo eléctrico constante.
+Como este microcontrolador no tiene una salida \gls{dac}, para controlar de manera precisa la intensidad de los impulsos electrotáctiles y adaptarla a los umbrales sensitivos del usuario, se ha sustituido el potenciómetro analógico manual por un potenciómetro digital MAX5413. El microcontrolador gobierna este dispositivo mediante un protocolo basado en \gls{spi}, optimizando el uso de pines al compartir las líneas de datos DIN y de reloj CLK con el circuito integrado de conmutación de alta tensión HV2701, requiriendo únicamente una línea adicional para la selección de chip el potenciometro (CS*). La señal digital del microcontrolador se hace pasar por este potenciómetro y se introduce en un amplificador operacional LMV341 conectado a un \gls{fet} BSS87, configurando una fuente de corriente controlada por voltaje para independizar la señal de la carga. Acto seguido, un espejo de corriente basado en transistores bipolares \gls{bjt} FCX705 replica esta corriente de referencia y la transfiere hacia la línea de alta tensión de 72~V, asegurando un flujo eléctrico constante.
 
 La señal de corriente regulada por esta etapa se inyecta en el conmutador analógico de alta tensión HV2701. Este circuito integrado multiplexa la señal hacia los 10 canales disponibles en la mano y las dos tomas de tierra independientes (Base 1 y Base 2), encargadas de aislar los nervios mediano y cubital. Internamente, una matriz de interruptores actúa a modo de puente en H para invertir dinámicamente la polaridad de la estimulación (catódica o anódica) según los requerimientos específicos de la zona palmar seleccionada.
 
-Debido a la arquitectura del sistema, se aplica una técnica de multiplexación temporal para mitigar las interferencias; de este modo, el integrado HV2701 solo habilita un camino de corriente hacia un único objetivo simultáneamente. Dado que este integrado es capaz de conmutar entre canales en un tiempo de apenas 10~$\mu$s, el firmware del Arduino completa un ciclo secuencial para todos los canales en un intervalo inferior a 10~ms. Puesto que el umbral de discriminación temporal del sentido del tacto humano se sitúa en torno a los 50~ms, el usuario percibe la activación de múltiples puntos de la mano de forma totalmente concurrente a frecuencias de hasta 100~Hz \cite{Tanaka2023}.
+Debido a la arquitectura del sistema, el integrado HV2701 solo puede habilitar un camino de corriente hacia un único objetivo simultáneamente. Por ello, la simultaneidad perceptiva no se implementa manteniendo varios caminos activos a la vez, sino serializando los pulsos en el firmware: cada estímulo se aplica sobre una única ruta, que se abre y se cierra explícitamente antes de pasar a la siguiente. Dado que este integrado es capaz de conmutar entre canales en un tiempo de apenas 10~$\mu$s \cite{HV2701_DataSheet}, esta secuenciación cabe holgadamente dentro del tiempo de bucle de 10~ms.
 
-Para dotar de seguridad al sistema y evitar accidentes se integra en serie un diodo limitador de corriente (E-452) que actúa como limitador físico si la corriente de salida llega a alcanzar los 4.5~mA, garantizando la inocuidad del guante ante cualquier fallo de ejecución en el microcontrolador. Por último, todo este diseño electrónico se ha plasmado en una PCB que fue diseñada mediante el software KiCad y posteriormente enviada a fabricar para su ensamblaje final, diseño y resultado que se pueden ver en la Figura \ref{fig:diseno_pcb}.
+Para dotar de seguridad al sistema y evitar accidentes se integra en serie un diodo limitador de corriente (E-452) que actúa como limitador físico si la corriente de salida llega a alcanzar los 4.5~mA, garantizando la inocuidad del guante ante cualquier fallo de ejecución en el microcontrolador. Por último, todo este diseño electrónico se ha plasmado en una \gls{pcb} que fue diseñada mediante el software KiCad y posteriormente enviada a fabricar para su ensamblaje final, diseño y resultado que se pueden ver en la Figura \ref{fig:diseno_pcb}.
 
 
 \begin{figure}[htbp]
     \centering
     \includegraphics[width=\textwidth]{Imagenes/diseño_pcb.png} % Ajusta el nombre de la imagen y escala
-    \caption{Diseño final de la PCB del circuito de estimulación electrotáctil desarrollado en KiCad y resultado final una vez se recibió de la fábrica. Agradecimientos a Diego Antolín por su ayuda con el diseño y a Óscar Lasarte por montar la placa.}
+    \caption[Diseño final de la \gls{pcb} del circuito de estimulación electrotáctil]{Diseño final de la \gls{pcb} del circuito de estimulación electrotáctil desarrollado en KiCad y resultado final una vez se recibió de la fábrica. Agradecimientos a Diego Antolín por su ayuda con el diseño y a Óscar Lasarte por montar la placa.}
     \label{fig:diseno_pcb}
 \end{figure}
 
 \section{Procesamiento de datos: orientación espacial}
 El núcleo del procesamiento de datos de la \gls{imu} LSM6DSOXTR reside en la estimación precisa de la orientación del sensor. Anteriormente, se planteaba el sistema de ecuaciones para obtener la expresión de los ángulos de Euler de la orientación, pero haciendo esto, una de las ecuaciones debe de integrar en el tiempo dos de los ejes del giroscopio. Con este método el procesamiento inducia en deriva de uno de los ángulos de manera inevitable \cite{TFG}.
 
-Para este trabajo, se ha implementado un filtro complementario no lineal propuesto por Mahony et al. \cite{Mahony2008}, el cual formula el problema de estimación como una cinemática de observador determinista directamente sobre el grupo ortogonal especial $SO(3)$. Este método utiliza la geometría del grupo de Lie para desacoplar las mediciones del giroscopio del error de actitud reconstruido, buscando una implementación lo más eficiente posible para el hardware disponible.
+Para este trabajo, se ha implementado un filtro algoritmico propuesto por Mahony et al. \cite{Mahony2008}, el cual formula el problema de estimación como una cinemática de observador determinista directamente sobre el grupo ortogonal especial $SO(3)$. Este método utiliza la geometría del grupo de Lie para desacoplar las mediciones del giroscopio del error de actitud reconstruido, buscando una implementación lo más eficiente posible para el hardware disponible.
 
 \subsection{Representación de la orientación: cuaterniones}
 
@@ -364,9 +373,7 @@ $(q_1, q_2, q_3)$ es la parte vectorial, asociada al eje de rotación. La condic
 \subsection{Fusión de acelerómetro y giroscopio}
 
 El giroscopio proporciona la velocidad angular $\boldsymbol{\omega}$, que integrada en el tiempo permite seguir la evolución de la orientación con gran precisión a corto plazo.
-Sin embargo, cualquier sesgo (\textit{bias}) estático o deriva lenta en sus lecturas se acumula en la integral, generando un error de orientación que crece sin límite con el tiempo. El acelerómetro, por su parte, mide la aceleración total del sensor; cuando el guante no está sometido a aceleraciones externas apreciables, esta medida queda
-dominada por la gravedad terrestre, cuya dirección es conocida en el marco inercial.
-Esto permite obtener una referencia absoluta de inclinación, libre de deriva, aunque ruidosa en presencia de movimientos bruscos.
+Sin embargo, cualquier sesgo (\textit{bias}) estático o deriva lenta en sus lecturas se acumula en la integral, generando un error de orientación que crece sin límite con el tiempo. El acelerómetro, por su parte, mide la aceleración total del sensor; cuando el guante no está sometido a aceleraciones externas apreciables, esta medida queda dominada por la gravedad terrestre, cuya dirección es conocida en el marco inercial. Esto permite obtener una referencia absoluta de inclinación, libre de deriva, aunque ruidosa en presencia de movimientos bruscos.
 
 El filtro de Mahony se basa en la complementariedad de ambos sensores: el giroscopio proporciona una estimación dinámica y precisa a corto plazo, mientras que el acelerómetro corrige continuamente la deriva a largo plazo. Para cuantificar cuánto difiere la orientación estimada de la real se define un error vectorial $\mathbf{e}$ mediante el producto vectorial entre la dirección de la gravedad medida por el acelerómetro normalizada y la dirección de la gravedad que el cuaternión actual predice en el marco del sensor \cite{Mahony2008}:
 
@@ -444,8 +451,7 @@ Al encender el guante, antes de comenzar la estimación en régimen permanente, 
 y a partir de ese instante, toda medida angular se corrige sustrayendo este valor antes de introducirlo en el filtro. Esta calibración reduce el error inicial del controlador
 integral, acelerando la convergencia del filtro.
 
-Además del sesgo del giroscopio, existe un segundo problema práctico: la orientación física del guante en el momento de encendido puede ser arbitraria, lo que haría que el entorno virtual comenzara siempre en una postura diferente. Para resolverlo, una vez completada la   calibración se captura el cuaternión resultante como referencia de
-postura neutra, calculando su conjugado:
+Además del sesgo del giroscopio, existe un segundo problema a tener en cuenta: la orientación física del guante en el momento de encendido puede ser arbitraria, lo que haría que la estimación de la orientación comenzara desde una postura diferente. Para resolverlo, una vez completada la calibración se captura el cuaternión resultante como referencia de postura neutra, calculando su conjugado:
 
 \begin{equation}
 \mathbf{q}_{\text{off}} = (q_0, -q_1, -q_2, -q_3).
@@ -457,47 +463,36 @@ A partir de ese momento, la orientación transmitida al entorno de control no es
 \mathbf{q}_{\text{rel}} = \mathbf{q}_{\text{off}} \otimes \mathbf{q}.
 \end{equation}
 
-Este recentrado garantiza que el sistema arranque siempre en una postura neutra definida por el usuario, independientemente de la orientación física inicial del guante, simplificando enormemente la puesta en marcha y haciendo el dispositivo robusto frente a variaciones en la colocación del guante entre sesiones.
+Este recentrado garantiza que el sistema arranque siempre en una postura neutra definida por el usuario, independientemente de la orientación física inicial del guante, simplificando la puesta en marcha y haciendo el dispositivo robusto frente a variaciones en la colocación del guante entre sesiones. Además, durante el uso del guante, el usuario puede accionar el reseteo de la referencia en cualquier momento, lo que permite adaptar dinámicamente el sistema a cambios en la postura del brazo o a la necesidad de reajustar la posición neutra durante una sesión prolongada.
 
 
 \section{Procesamiento de datos: flexión de los dedos}
 
-A diferencia del bloque anterior, orientado al tratamiento de los datos de la \gls{imu},
-este apartado describe el procesamiento de la información procedente de los divisores
-piezorresistivos para la determinación de la posición de los dedos. Como se adelantó en
-la introducción, esta tarea se delega en un módulo de inteligencia artificial embebido,
-ya que aunque sería factible establecer umbrales fijos para cada posición, las
-herramientas actuales de despliegue de modelos neuronales sobre microcontroladores
-ofrecen soluciones más flexibles, robustas frente a la variabilidad entre sesiones y
-computacionalmente ligeras.
+A diferencia del bloque anterior, orientado al tratamiento de los datos de la \gls{imu}, este apartado describe el procesamiento de la información procedente de los divisores piezorresistivos para la determinación de la posición de los dedos. Como se adelantó en la introducción, esta tarea se delega en un módulo de inteligencia artificial embebido, ya que aunque sería factible establecer umbrales fijos para cada posición, las herramientas actuales de despliegue de modelos neuronales sobre microcontroladores ofrecen soluciones más flexibles, robustas frente a la variabilidad entre sesiones y computacionalmente ligeras.
 
-Una red neuronal es un conjunto de nodos interconectados que, al recibir una
-serie de valores de entrada, los transforma a través de sucesivas capas de procesamiento hasta producir una salida. El interés de estas redes reside en su capacidad de ajustar los pesos de sus conexiones durante un proceso de entrenamiento, en el que se le presentan ejemplos etiquetados y la red modifica iterativamente sus parámetros para minimizar el error entre su salida y la respuesta esperada. Para el reconocimiento de posiciones de la mano, se emplea una arquitectura \textit{fully connected}, en la que todos los nodos de una capa
-conectan con todos los nodos de la siguiente, tal como se ilustra en la
-Figura~\ref{fig:red_fc}.
+Una red neuronal es un conjunto de nodos interconectados que, al recibir una serie de valores de entrada, los transforma a través de sucesivas capas de procesamiento hasta producir una salida. El interés de estas redes reside en su capacidad de ajustar los pesos de sus conexiones durante un proceso de entrenamiento, en el que se le presentan ejemplos etiquetados y la red modifica iterativamente sus parámetros para minimizar el error entre su salida y la respuesta esperada. Para el reconocimiento de posiciones de la mano, se emplea una arquitectura \textit{fully connected}, en la que todos los nodos de una capa conectan con todos los nodos de la siguiente, tal como se ilustra en la Figura~\ref{fig:red_fc}.
 
 \begin{figure}[htbp]
     \centering
     \includegraphics[width=0.5\textwidth]{Imagenes/fully_conected.png}
     \caption[Arquitectura de red neuronal \textit{fully connected}]{Esquema de una red
-    neuronal \textit{fully connected}.}
+    neuronal \textit{fully connected} \cite{TFG}.}
     \label{fig:red_fc}
 \end{figure}
 
-El proceso de ajuste se lleva a cabo con TensorFlow \cite{TensorFlow}, una librería de Python de código abierto desarrollada por Google que proporciona herramientas de alto nivel para la definición, entrenamiento y exportación de modelos neuronales. Aun así, antes de definir la arquitectura de la red hay que recopilar una serie de datos que formaran el conjunto de entrenamiento.
+La selección inicial de la arquitectura se lleva a cabo en Python mediante \textit{scikit-learn}, usando una red \textit{fully connected} de tipo \texttt{MLPClassifier}. Posteriormente, una vez fijada la configuración, el modelo equivalente se entrena y exporta con TensorFlow Lite \cite{TensorFlow} para su integración en el microcontrolador. Aun así, antes de definir la arquitectura de la red hay que recopilar una serie de datos que formarán el conjunto de entrenamiento.
+
+
 
 \subsection{Dataset}
 
-El \textit{dataset} es el conjunto de ejemplos etiquetados a partir del cual la red aprende a asociar cada combinación de lecturas sensoriales con la posición correcta de la mano. En este trabajo, las entradas de la red son los dos valores del \gls{adc}
-correspondientes a los dedos índice y corazón, únicos sensores piezorresistivos destinados al reconocimiento de postura. Los dedos anular y meñique se reservan para funciones de control independientes descritas en la sección~\ref{sec:dron}, por lo que sus lecturas no forman parte del clasificador.
+El \textit{dataset} es el conjunto de ejemplos etiquetados a partir del cual la red aprende a asociar cada combinación de lecturas sensoriales con la posición correcta de la mano. En este trabajo, las entradas de la red son los dos valores del \gls{adc} correspondientes a los dedos índice y corazón, únicos sensores piezorresistivos destinados al reconocimiento de postura. Los dedos anular y meñique se reservan para funciones de control independientes descritas en la sección~\ref{sec:dron}, por lo que sus lecturas no forman parte del clasificador.
 
-La salida de la red es un identificador de posición codificado como un entero entre
-0 y 8, correspondiente a las 9 posiciones representadas en la
-Figura~\ref{fig:posiciones_dataset}. Esta reducción respecto al trabajo previo, donde se usaban más dedos \cite{TFG}, podría suponer una limitación, pero en ciertos aspectos aporta ventajas sobre la red neuronal: con solo 2 entradas en lugar de 4, el espacio de estados que la red debe aprender es considerablemente más reducido, lo que permite alcanzar precisiones elevadas con arquitecturas más pequeñas, menor tiempo de inferencia en el microcontrolador y menor riesgo de sobreajuste durante el entrenamiento. Además, al disponer de un número de clases ligeramente menor (9 frente a 10), el problema de clasificación resulta intrínsecamente más sencillo, especialmente porque se eliminan algunas de las posiciones más similares entre sí que generan mayor confusión en la red.
+La salida de la red es un identificador de posición codificado como un entero entre 0 y 8, correspondiente a las 9 posiciones representadas en la Figura~\ref{fig:posiciones_dataset}. Esta reducción respecto al trabajo previo, donde se usaban cuatro dedos \cite{TFG}, podría suponer una limitación, pero en ciertos aspectos aporta ventajas sobre la red neuronal: con solo dos entradas, el espacio de estados que la red debe aprender se reduce a la mitad, lo que permite alcanzar precisiones elevadas con arquitecturas más pequeñas, menor tiempo de inferencia en el microcontrolador y menor riesgo de sobreajuste durante el entrenamiento. Además, al disponer de un número de clases ligeramente menor (9 frente a 10), el problema de clasificación resulta intrínsecamente más sencillo, especialmente porque se eliminan algunas de las posiciones más similares entre sí que generan mayor confusión en la red.
 
 \begin{figure}[htbp]
     \centering
-    \includegraphics[width=0.5\textwidth]{Imagenes/DATASET.png}
+    \includegraphics[width=0.65\textwidth]{Imagenes/DATASET.png}
     \caption[Posiciones definidas para el \textit{dataset}]{Representación de las 9
     posiciones definidas para el \textit{dataset}.}
     \label{fig:posiciones_dataset}
@@ -505,12 +500,14 @@ Figura~\ref{fig:posiciones_dataset}. Esta reducción respecto al trabajo previo,
 
 Para la adquisición de los datos se desarrolló un programa que, cada vez que se pulsa \textit{enter}, solicita al usuario que adopte una de las posiciones indicadas y almacena las lecturas de los sensores en un fichero de texto. Con el fin de dotar a la red de la mayor robustez posible frente a variaciones en la colocación del guante o en las condiciones de uso, el \textit{dataset} se tomó a lo largo de varios días distintos, introduciendo así dispersión natural debida a ligeras diferencias en la posición del guante sobre la mano o en la postura del brazo.
 
-El conjunto de datos resultante cuenta con aproximadamente XXX muestras por posición, distribuidas de forma uniforme entre las 9 clases para evitar sesgos durante el entrenamiento, como puede comprobarse en la Figura~\ref{fig:histograma_dataset}.
-En cuanto al reparto, el 80\,\% de los datos se destinan al entrenamiento, el 10\,\% a la validación y el 10\,\% restante al test, seleccionados de forma aleatoria.
+El conjunto de datos resultante cuenta con 460 muestras, con entre 50 y 54 ejemplos por posición, distribuidas de forma uniforme entre las 9 clases para evitar sesgos durante el entrenamiento, como puede comprobarse en la Figura~\ref{fig:histograma_dataset}. En la Figura~\ref{fig:boxplot_dataset} se muestran los gráficos de cajas y bigotes para cada posición, que muestran la variabilidad de las lecturas del \gls{adc} en cada clase y la existencia de solapamientos entre algunas posiciones, lo que justifica la necesidad de un clasificador no lineal como la red neuronal para resolver estas ambigüedades.
+En cuanto al reparto empleado durante la selección de la arquitectura, el 80\,\% de los datos se destinan al entrenamiento y validación cruzada, y el 20\,\% restante se reserva como conjunto de test, seleccionados de forma aleatoria estratificada.
+
+
 
 \begin{figure}[htbp]
     \centering
-    % INSERTAR FIGURA: histograma de distribución del dataset por posición
+    \includegraphics[width=0.75\textwidth]{Imagenes/histograma_dataset_flexion.png}
     \caption[Distribución del \textit{dataset} por posición]{Histograma del número de
     muestras por posición en el \textit{dataset}.}
     \label{fig:histograma_dataset}
@@ -518,7 +515,7 @@ En cuanto al reparto, el 80\,\% de los datos se destinan al entrenamiento, el 10
 
 \begin{figure}[htbp]
     \centering
-    % INSERTAR FIGURA: gráficos de bigotes por dedo y posición
+    \includegraphics[width=0.95\textwidth]{Imagenes/boxplot_dataset_flexion.png}
     \caption[Distribución de valores ADC por posición]{Gráficos de cajas y bigotes que
     muestran la distribución de los valores del \gls{adc} para cada dedo en cada
     posición del \textit{dataset}.}
@@ -529,156 +526,104 @@ Por conveniencia, los valores del \textit{dataset} se escalan acotando todas las
 Esta normalización garantiza que, aunque existan ligeras variaciones en el funcionamiento de los sensores entre sesiones o diferencias en la colocación del guante, el clasificador opere siempre sobre el mismo rango de entrada, preservando su precisión
 en el uso cotidiano.
 
-\subsubsection{\textit{One-hot encoding}}
+\subsubsection{Codificación de salida}
 
-Dado que se trata de un problema de clasificación multiclase, la salida de la red se
-codifica mediante \textit{one-hot encoding} \cite{OneHot}. En lugar de representar
-cada posición como un único entero, la red cuenta con 9 salidas, una por clase, y
-proporciona como resultado un vector de probabilidades cuya componente de mayor valor
-indica la posición estimada. Para ello, cada etiqueta numérica del \textit{dataset} se
-sustituye por un vector de 9 elementos con un 1 en la posición correspondiente y 0 en
-el resto. Así, por ejemplo, la posición 0 (mano abierta) queda codificada como
-\texttt{100000000}, mientras que la posición 3 se representaría como \texttt{000100000}.
-
-En la capa de salida, esta codificación se asocia habitualmente a la función de
-activación \textit{softmax}, que mapea el vector de salida al simplex de probabilidades
-garantizando que la suma de todas las componentes sea la unidad
-(Figura~\ref{fig:activaciones}a). Sin embargo, esta función no está implementada en la
-librería empleada para la exportación del modelo al microcontrolador. Por ello se
-sustituye por la función ReLU (Figura~\ref{fig:activaciones}b), presente en el resto de
-capas de la red, cuya sencillez la hace especialmente eficiente en hardware embebido.
-Aunque con esta sustitución se pierde la interpretación probabilística estricta de la
-salida, los resultados experimentales obtenidos resultan igualmente satisfactorios.
-
-\begin{figure}[htbp]
-    \centering
-    % INSERTAR FIGURA: subfiguras con softmax y ReLU
-    \caption[Funciones de activación]{Funciones de activación empleadas en la red:
-    (a) \textit{Softmax}, usada habitualmente en la capa de salida de clasificadores
-    multiclase. (b) ReLU, empleada en todas las capas de la red final.}
-    \label{fig:activaciones}
-\end{figure}
+Dado que se trata de un problema de clasificación multiclase, cada muestra del \textit{dataset} se etiqueta con un entero entre 0 y 8. Durante la selección de la arquitectura, el clasificador recibe directamente estas etiquetas numéricas y aprende a separar las nueve regiones del espacio formado por las dos lecturas de entrada. En el modelo exportado, la capa final mantiene 9 neuronas, una por posición, y la clase estimada se obtiene tomando la salida de mayor valor. De este modo se conserva una interfaz sencilla para el firmware, que solo necesita comparar las activaciones de salida para determinar la posición reconocida.
 
 \subsection{Entrenamiento y selección de la arquitectura}
 
-El objetivo del proceso de entrenamiento es encontrar la red de menor tamaño posible
-que mantenga una precisión próxima al 100\,\%, ya que una red más compacta ocupa menos
-memoria en el microcontrolador y reduce el tiempo de inferencia, aspecto crítico dado
-el ciclo de 10\,ms impuesto por la tasa de muestreo de la \gls{imu}.
+El objetivo del proceso de entrenamiento es encontrar la red de menor tamaño posible que mantenga una precisión lo más cercana posible al 100\,\%, ya que una red más compacta ocupa menos memoria en el microcontrolador y reduce el tiempo de inferencia, aspecto crítico dado el ciclo de 10\,ms impuesto por la tasa de muestreo de la \gls{imu}.
 
-La red se fija en 4 capas: una capa de entrada de 2 neuronas, dos capas ocultas de
-tamaño variable y una capa de salida de 9 neuronas. Se exploran distintas
-configuraciones de las capas ocultas, evaluando cómo evoluciona la precisión en
-validación al variar el número de neuronas en la primera capa oculta con la segunda
-fijada en 15 neuronas (Figura~\ref{fig:precision_vs_neuronas}). A partir de los
-resultados, se seleccionan únicamente las configuraciones que superan el 95\,\% de
-precisión, lo que acota el rango de arquitecturas candidatas.
+La red se construirá sobre una arquitectura de cuatro capas: una capa de entrada de 2 neuronas, dos capas ocultas de tamaño variable y una capa de salida de 9 neuronas. Para seleccionar la configuración se sigue el siguiente procedimiento: se separa un 20\,\% del conjunto como test y, sobre el 80\,\% restante, se realiza una búsqueda con validación cruzada estratificada de 5 particiones. Las arquitecturas candidatas son (40,20), (64,32), (128,64) y (128,128), combinadas con distintos valores de regularización \textit{L2} y tasa de aprendizaje inicial. La métrica optimizada es el \textit{F1-score}, más adecuada que la precisión global cuando se quiere equilibrar el rendimiento entre clases.
+
 
 \begin{figure}[htbp]
     \centering
-    % INSERTAR FIGURA: precisión vs. tamaño primera capa oculta
-    \caption[Evolución de la precisión con el tamaño de la primera capa oculta]{Evolución
-    de la precisión de la red en función del número de neuronas en la primera capa
-    oculta, con la segunda capa fijada en 15 neuronas.}
+    \includegraphics[width=0.75\textwidth]{Imagenes/seleccion_arquitectura_fcnn.png}
+    \caption[Selección de la arquitectura mediante validación cruzada]{Mejor \textit{F1} obtenido en validación cruzada para cada arquitectura candidata durante la búsqueda en rejilla.}
     \label{fig:precision_vs_neuronas}
 \end{figure}
 
-Durante el entrenamiento se ajustan dos hiperparámetros adicionales: el número de
-épocas y el \textit{dropout}. El número de épocas determina cuántas iteraciones
-completas sobre el conjunto de entrenamiento realiza el optimizador; aunque aumentarlo
-mejora la precisión, a partir de cierto punto la red queda atrapada en un óptimo local
-y deja de mejorar. El \textit{dropout} mitiga este problema reiniciando aleatoriamente
-una fracción de los pesos entre épocas, forzando a la red a explorar nuevas soluciones
-y evitando el estancamiento. Con esta estrategia se alcanzan precisiones del 99\,\%,
-a costa de tiempos de entrenamiento algo más prolongados.
+El mejor resultado de validación cruzada se obtiene con dos capas ocultas de 40 y 20 neuronas, regularización \textit{L2} de $10^{-5}$ y tasa de aprendizaje inicial de $3\cdot10^{-3}$. Con esta configuración se alcanza un \textit{F1} medio de 0.983 durante la validación cruzada. Al evaluar el modelo seleccionado sobre el conjunto de test reservado, la precisión obtenida es 0.935 y el \textit{F1} es de 0.934, valores suficientes para el uso previsto teniendo en cuenta que el firmware añade una confirmación temporal de la posición predicha.
 
 \subsection{Compresión e integración con TensorFlow Lite}
 
-Una vez seleccionada la arquitectura óptima, el modelo se exporta al microcontrolador
-mediante TensorFlow Lite \cite{TFLite} y su adaptación para Arduino, la librería
-Eloquent \cite{Eloquent}. El proceso de compresión consta de dos etapas: en primer
-lugar, se congelan todos los pesos de la red convirtiéndolos de variables a constantes
-y se elimina la arquitectura de entrenamiento, conservando únicamente la parte de
-inferencia; en segundo lugar, los parámetros se cuantifican de punto flotante de 32
-bits a punto fijo de 8 bits, reduciendo drásticamente el tamaño del modelo en memoria.
+Una vez seleccionada la arquitectura, el modelo se exporta al microcontrolador mediante TensorFlow Lite \cite{TFLite} y su adaptación para Arduino, la librería Eloquent \cite{Eloquent}. Para el proceso de compresión primero se congelan todos los pesos de la red convirtiéndolos de variables a constantes y se elimina la arquitectura de entrenamiento, conservando únicamente la parte de inferencia; en segundo lugar, los parámetros se cuantifican de punto flotante de 32 bits a punto fijo de 8 bits, reduciendo el tamaño del modelo en memoria.
 
-El resultado de la compresión es un fichero \texttt{.h} que se incorpora directamente
-al programa del Arduino. Dado que la cuantificación puede degradar la precisión, se
-evalúan todas las redes candidatas tras la compresión para identificar cuáles mantienen
-su rendimiento. Se observa que las configuraciones con menor número de neuronas
-presentan una mayor pérdida de precisión al comprimir, especialmente en la distinción
-de posiciones similares entre sí. En cuanto a los tiempos de inferencia, la diferencia
-entre la red más pequeña y la más grande es inferior a 0.1\,ms, por lo que se adopta
-la red de mayor tamaño de entre las validadas, ya que ofrece la mayor robustez ante
-posiciones próximas sin comprometer el ciclo temporal del sistema. La arquitectura
-final seleccionada se muestra en la Figura~\ref{fig:arquitectura_red}.
+El resultado de la compresión es un fichero \texttt{.h} que se incorpora directamente al programa del Arduino. La arquitectura seleccionada, de tamaño 2--40--20--9, combina un número reducido de parámetros con una separación suficiente entre clases próximas, por lo que mantiene bajo el coste de inferencia sin comprometer el ciclo temporal del sistema. La arquitectura final y sus caracteristicas se resume en la Tabla~\ref{tab:arquitectura_red}.
 
-\begin{figure}[htbp]
-    \centering
-    % INSERTAR FIGURA: tabla o esquema con capas, tamaños y número de parámetros
-    \caption[Arquitectura final de la red neuronal]{Arquitectura de la red neuronal
-    seleccionada tras el proceso de entrenamiento y compresión: tamaño de cada capa y
-    número de parámetros entrenables.}
-    \label{fig:arquitectura_red}
-\end{figure}
+\begin{table}[htbp]
+\centering
+\caption[Arquitectura final de la red neuronal]{Resumen de la arquitectura
+de la red neuronal seleccionada tras el proceso de entrenamiento.}
+\label{tab:arquitectura_red}
 
-Complementando al clasificador, se implementa un mecanismo de confirmación de posición:
-el sistema solo registra un cambio de estado cuando la red predice la nueva posición de
-forma consistente durante un intervalo de tiempo mínimo. Dado que el ciclo de medida
-es de 10\,ms, significativamente inferior al tiempo de reacción motora del usuario,
-sin este mecanismo las transiciones entre posiciones o los errores puntuales de la red
-generarían detecciones espurias que degradarían la experiencia de control.
+\begin{tabular}{lcc}
+\hline
+\textbf{Capa} & \textbf{Tamaño de salida} & \textbf{N.º de parámetros} \\
+\hline
+Entrada & 2 & -- \\
+Densa 1 (ReLU) & 40 & 120 \\
+Densa 2 (ReLU) & 20 & 820 \\
+Salida (Softmax) & 9 & 189 \\
+\hline
+\textbf{Total} & -- & \textbf{1129} \\
+\hline
+\end{tabular}
+\end{table}
+
+Complementando al clasificador, se implementa un mecanismo de confirmación de posición: el sistema solo registra un cambio de estado cuando la red predice la nueva posición de forma consistente durante un intervalo de tiempo mínimo. Dado que el ciclo de medida es de 10\,ms, significativamente inferior al tiempo de reacción motora del usuario, sin este mecanismo las transiciones entre posiciones o los errores puntuales de la red generarían detecciones espurias que degradarían la experiencia de control.
 
 
 \section{Estudio de percepción de sensación táctil}
 
-Con el hardware completamente ensamblado y el firmware de control operativo, el siguiente paso antes de integrar el sistema en la aplicación final es caracterizar y validar experimentalmente el módulo de estimulación electrotáctil. Este apartado recoge, en primer lugar, la caracterización eléctrica del circuito para establecer la relación entre la configuración del potenciómetro digital y la corriente realmente inyectada en los electrodos. A partir de dicha caracterización se obtiene una curva de linealización que permite programar directamente valores de corriente desde el microcontrolador. En segundo lugar, se describe un estudio perceptivo realizado sobre el propio autor con el objetivo de evaluar la capacidad del sistema para generar sensaciones táctiles localizadas en los puntos de la mano definidos en la sección~2.
+Con el hardware completamente ensamblado y el firmware de control operativo, el siguiente paso antes de integrar el sistema en la aplicación final es caracterizar y validar experimentalmente el módulo de estimulación electrotáctil. Este apartado recoge, en primer lugar, la caracterización del circuito para establecer la relación entre la configuración del potenciómetro digital y la corriente realmente inyectada en los electrodos. A partir de dicha caracterización se obtiene una curva de linealización que permite programar directamente valores de corriente desde el microcontrolador. En segundo lugar, se describe un estudio perceptivo realizado sobre el propio autor con el objetivo de evaluar la capacidad del sistema para generar sensaciones táctiles localizadas en los puntos de la mano definidos en la sección~2.
 
 \subsection{Caracterización de la curva de corriente}
 
-El potenciómetro digital MAX5413 admite valores de configuración $P$ comprendidos entre 0 y 255, que el microcontrolador transmite mediante el protocolo SPI. Internamente, este dispositivo actúa como una resistencia variable en la red de polarización del amplificador operacional LMV342, de modo que el valor de $P$ determina la resistencia efectiva $R(P)$ del potenciómetro según la relación:
+El potenciómetro digital MAX5413 admite valores de configuración $\mathrm{P}$ comprendidos entre 0 y 255 bits, que el microcontrolador transmite mediante el protocolo \gls{spi}. Internamente, este dispositivo actúa como una resistencia variable en la red de polarización del amplificador operacional LMV342, de modo que el valor de $\mathrm{P}$ determina la resistencia efectiva $R(P)$ del potenciómetro según la relación:
 
 \begin{equation}
-    R(P) = R_{\max} \cdot \frac{P}{255},
+    R(\mathrm{P}) = R_{\max} \cdot \frac{\mathrm{P}}{255},
 \end{equation}
 
-donde $R_{\max}$ es la resistencia máxima del dispositivo, en este caso $10~\mathrm{k}\Omega$. Dado que el amplificador operacional junto con el transistor FET configura una fuente de corriente controlada por voltaje, la corriente de salida queda determinada por la tensión en el nodo de control, que a su vez es inversamente proporcional a $R(P)$. La corriente resultante sigue por tanto la relación:
+donde $R_{\max}$ es la resistencia máxima del dispositivo, en este caso $10~\mathrm{k}\Omega$. Dado que el amplificador operacional junto con el transistor \gls{fet} configura una fuente de corriente controlada por voltaje, la corriente de salida queda determinada por la tensión en el nodo de control, que a su vez es inversamente proporcional a $R(\mathrm{P})$. La corriente resultante sigue por tanto la relación:
 
 \begin{equation}
-    I(P) = \frac{Cte}{P},
+    I \propto \frac{1}{\mathrm{P}},
     \label{eq:curva_corriente}
 \end{equation}
 
-donde $K$ es una constante que agrupa los parámetros del circuito. Esta dependencia hiperbólica implica que incrementos iguales de $P$ no producen incrementos iguales de corriente, siendo la respuesta muy sensible a valores bajos de $P$ y
-progresivamente más plana a medida que $P$ aumenta.
+Esta dependencia hiperbólica implica que incrementos iguales de $\mathrm{P}$ no producen incrementos iguales de corriente, siendo la respuesta muy sensible a valores bajos de $\mathrm{P}$ y
+progresivamente más plana a medida que $\mathrm{P}$ aumenta.
 
-Para verificar experimentalmente esta relación y cuantificar el valor de $K$, se conectó una resistencia de carga conocida $R_L=1000 ~\Omega$ entre los terminales de salida del circuito en lugar de los electrodos. Midiendo la tensión $V_L$ en bornes de la
-resistencia con un multímetro, la corriente se obtiene directamente como $I = V_L / R_L$. El procedimiento se repitió para varios valores de $P$ entre 0 y 255, programando cada configuración desde el Arduino y registrando la medida correspondiente. Los resultados obtenidos se muestran en la
+Para verificar experimentalmente esta relación y cuantificar el valor de $K$, se conectó una resistencia de carga conocida $R_L=1004 ~\Omega$ entre los terminales de salida del circuito en lugar de los electrodos. Midiendo la tensión $V_L$ en bornes de la
+resistencia con un multímetro, la corriente se obtiene directamente como $I = V_L / R_L$. El procedimiento se repitió para varios valores de $\mathrm{P}$ entre 0 y 255, programando cada configuración desde el Arduino y registrando la medida correspondiente. Los resultados obtenidos se muestran en la
 Figura~\ref{fig:curva_IP}.
 
 \begin{figure}[htbp]
     \centering
         \includegraphics[width=0.8\textwidth]{Imagenes/curva_i_bit.png}
     \caption[Curva de corriente en función del valor del potenciómetro]{Corriente
-    medida en la carga en función del valor de configuración $P$ del potenciómetro
-    digital. La curva presenta la forma hiperbólica $I = Cte/P$ predicha, quitando la zona donde el diodo limitador de corriente empieza a tener efecto}
+    medida en la carga en función del valor de configuración $\mathrm{P}$ del potenciómetro
+    digital. La curva presenta la forma hiperbólica $I \propto 1/P$ predicha, quitando la zona donde el diodo limitador de corriente empieza a tener efecto}
     \label{fig:curva_IP}
 \end{figure}
 
 \subsection{Linealización y regresión}
 
 La relación hiperbólica de la ecuación~\eqref{eq:curva_corriente} resulta poco
-conveniente para el control del sistema, por lo que para obtener mediante una formula a que corriente corresponde cada valor de P, se procede a linealizar la curva mediante el cambio de variable $y = 1/I$, de modo que la relación entre corriente y variable transformada es lineal:
+conveniente para la caracterización del sistema, por lo que para obtener mediante una formula a que corriente corresponde cada valor de P, se procede a linealizar la curva mediante el cambio de variable $y = 1/I$, de modo que la relación entre corriente y variable transformada es lineal:
 
 \begin{equation}
-    y =  K \cdot P
+    y \propto  P
     \label{eq:linealizada}
 \end{equation}
 
-Sobre los datos experimentales transformados se realiza una regresión lineal por mínimos cuadrados, ajustando el modelo $y = a \cdot x + b$, donde el término independiente $b$ recoge posibles offset residuales del circuito. Los parámetros del ajuste obtenidos son:
+Sobre los datos experimentales transformados se realiza una regresión lineal por mínimos cuadrados, ajustando el modelo $y = a \cdot x + b$. Los parámetros del ajuste obtenidos son:
 
 \begin{equation}
-    \hat{a} = 0.01441 \,\text{mA}, \qquad \hat{b} = 0.0824 \,\text{mA},
+    \hat{a} = 0.01441 \, \qquad \hat{b} = 0.0824 \,
 \end{equation}
 
 con un coeficiente de determinación $R^2 = 0.9999$, lo que confirma la validez del modelo linealizado para describir el comportamiento del circuito en el rango de operación. Para el ajuste no se han tenido en cuenta los datos donde el diodo limitador de corriente tiene efecto. El ajuste se muestra superpuesto a los datos experimentales en la
@@ -687,24 +632,22 @@ Figura~\ref{fig:regresion}.
 \begin{figure}[htbp]
     \centering
         \includegraphics[width=0.8\textwidth]{Imagenes/curva_v_bit.png}
-    \caption[Regresión lineal sobre la curva linealizada]{Corriente medida en función
-    de $1/P$ junto con la recta de regresión obtenida por mínimos cuadrados. El
-    elevado valor de $R^2$ confirma el comportamiento lineal tras el cambio de
+    \caption[Regresión lineal sobre la curva linealizada]{Corriente medida en función de $y$ junto con la recta de la regresión lineal. El elevado valor de $R^2$ confirma el comportamiento lineal tras el cambio de
     variable.}
     \label{fig:regresion}
 \end{figure}
 
-Por lo tanto, dado un valor de $P$ el circuito dará una corriente de salida que seguirá la ecuación \ref{eq:calibracion}:
+Por lo tanto, dado un valor de $\mathrm{P}$ el circuito dará una corriente de salida que seguirá la ecuación (\ref{eq:calibracion}):
 
 \begin{equation}
-    I(P)=\frac{1}{0,01441\cdot P+0,0824}~mA
+    I(\mathrm{P})=\frac{1}{0,01441\cdot \mathrm{P}+0,0824}~mA
     \label{eq:calibracion}
 \end{equation}
 
-que se implementa en el firmware del Arduino para traducir cualquier valor de bit programado que se envía por SPI al MAX5413 con el valor de corriente correspondiente . De este modo, el resto del sistema opera en unidades de miliamperios, desacoplando la lógica de control de los detalles del circuito analógico.
+que se implementa en el firmware del Arduino para traducir cualquier valor de bit programado que se envía por \gls{spi} al MAX5413 con el valor de corriente correspondiente. De este modo, el resto del sistema opera en unidades de miliamperios, desacoplando la lógica de control de los detalles del circuito analógico.
 
-Como se observa en las dos figuras, el diodo limitador E-452 integrado en serie garantiza que, ante cualquier combinación de parámetros, la corriente que entra en el multiplexador no supere los 4.5\,mA, por lo que la ecuación~\eqref{eq:calibracion} solo es válida en el rango $P \in [15,\,255]$\,mA.
-Los demás valores de $P$ tendrán una corriente muy parecida a la que corresponde a $P=15$
+Como se observa en las dos figuras, el diodo limitador E-452 integrado en serie garantiza que, ante cualquier combinación de parámetros, la corriente que entra en el multiplexador no supere los 4.5\,mA, por lo que la ecuación~\eqref{eq:calibracion} solo es válida en el rango $\mathrm{P} \in [15,\,255]$\,mA.
+Los demás valores de $\mathrm{P}$ tendrán una corriente muy parecida a la que corresponde a $\mathrm{P}=15$.
 
 \subsection{Estudio perceptivo}
 
@@ -713,7 +656,7 @@ háptico mediante un estudio de percepción que se realizará sobre el propio au
 
 \subsubsection{Protocolo experimental}
 
-Para el estudio se emplea la señal \textit{Burst}, un pulso cuadrado de 50\,ms en estado activo, que produce una sensación puntual comparable a la de pulsar un botón. Para cada canal, se parte de un valor de $P$ elevado, correspondiente a una corriente baja, y se va reduciendo progresivamente hasta que el autor detecta alguna sensación. En ese punto, se envian 5 pulsos consecutivos y se anota la zona de la mano en la que se ha percibido el estímulo. Si la zona indicada coincide con la zona palmar esperada para ese canal según el diseño de la sección~2, el canal se considera válido; en caso contrario, se descarta.
+Para el estudio se emplea la señal \textit{Burst}, un pulso cuadrado de 50\,ms en estado activo, que produce una sensación puntual comparable a la de pulsar un botón. Para cada canal, se parte de un valor de $\mathrm{P}$ elevado, correspondiente a una corriente baja, y se va reduciendo progresivamente hasta que el autor detecta alguna sensación. En ese punto, se envian 5 pulsos consecutivos y se anota la zona de la mano en la que se ha percibido el estímulo. Si la zona indicada coincide con la zona palmar esperada para ese canal según el diseño de la sección~2, el canal se considera válido; en caso contrario, se descarta.
 
 \subsubsection{Resultados}
 
@@ -724,12 +667,11 @@ La Tabla~\ref{tab:umbrales} recoge, para cada canal, la zona palmar objetivo, la
     \renewcommand{\arraystretch}{1.2}
     
     % --- COLUMNA IZQUIERDA: IMAGEN (a) ---
-    \begin{subfigure}[b]{0.42\textwidth}
+    \begin{minipage}[b]{0.42\textwidth}
         \centering
         \includegraphics[width=\textwidth]{Imagenes/canal_estimulacion.png}
-        \caption{Zonas palmares objetivo por canal.}
-        \label{fig:zonas_canales}
-    \end{subfigure}
+        \small\textit{a) Zonas palmares objetivo por canal.}
+    \end{minipage}
     \hfill % Espacio entre la imagen y la tabla
     % --- COLUMNA DERECHA: TABLA (b) ---
     \begin{subtable}[b]{0.54\textwidth}
@@ -739,34 +681,34 @@ La Tabla~\ref{tab:umbrales} recoge, para cada canal, la zona palmar objetivo, la
             \hline
             \textbf{Canal} & \textbf{Zona objetivo} & \textbf{Polaridad} & \textbf{Válido} \\
             \hline
-            \multirow{2}{*}{ch1}  & \multirow{2}{*}{Pulgar}           & Anódica  & Dorsal \\
+            \multirow{2}{*}{1}  & \multirow{2}{*}{Pulgar}           & Anódica  & Dorsal \\
                                   &                                   & Catódica & \checkmark \\
             \arrayrulecolor{gray!40}\hline\arrayrulecolor{black}
-            \multirow{2}{*}{ch2}  & \multirow{2}{*}{Índice distal}    & Anódica  & \checkmark \\
+            \multirow{2}{*}{2}  & \multirow{2}{*}{Índice distal}    & Anódica  & \checkmark \\
                                   &                                   & Catódica & Dorsal\\
             \arrayrulecolor{gray!40}\hline\arrayrulecolor{black}
-            \multirow{2}{*}{ch3}  & \multirow{2}{*}{Corazón distal}   & Anódica  & \checkmark \\
+            \multirow{2}{*}{3}  & \multirow{2}{*}{Corazón distal}   & Anódica  & \checkmark \\
                                   &                                   & Catódica & Dorsal \\
             \arrayrulecolor{gray!40}\hline\arrayrulecolor{black}
-            \multirow{2}{*}{ch4}  & \multirow{2}{*}{Anular distal}    & Anódica  & \checkmark \\
+            \multirow{2}{*}{4}  & \multirow{2}{*}{Anular distal}    & Anódica  & \checkmark \\
                                   &                                   & Catódica & \checkmark\\
             \arrayrulecolor{gray!40}\hline\arrayrulecolor{black}
-            \multirow{2}{*}{ch5}  & \multirow{2}{*}{Meñique distal}   & Anódica  & \checkmark \\
+            \multirow{2}{*}{5}  & \multirow{2}{*}{Meñique distal}   & Anódica  & \checkmark \\
                                   &                                   & Catódica & Dorsal\\
             \arrayrulecolor{gray!40}\hline\arrayrulecolor{black}
-            \multirow{2}{*}{ch6}  & \multirow{2}{*}{Índice proximal}  & Anódica  & \checkmark\\
+            \multirow{2}{*}{6}  & \multirow{2}{*}{Índice proximal}  & Anódica  & \checkmark\\
                                   &                                   & Catódica & Dorsal\\
             \arrayrulecolor{gray!40}\hline\arrayrulecolor{black}
-            \multirow{2}{*}{ch7}  & \multirow{2}{*}{Corazón proximal} & Anódica  & \checkmark \\
+            \multirow{2}{*}{7}  & \multirow{2}{*}{Corazón proximal} & Anódica  & \checkmark \\
                                   &                                   & Catódica & 50/50 \\
             \arrayrulecolor{gray!40}\hline\arrayrulecolor{black}
-            \multirow{2}{*}{ch8}  & \multirow{2}{*}{Anular proximal}  & Anódica  & \checkmark \\
+            \multirow{2}{*}{8}  & \multirow{2}{*}{Anular proximal}  & Anódica  & \checkmark \\
                                   &                                   & Catódica & 50/50\\
             \arrayrulecolor{gray!40}\hline\arrayrulecolor{black}
-            \multirow{2}{*}{ch9}  & \multirow{2}{*}{Meñique proximal} & Anódica  & \checkmark \\
+            \multirow{2}{*}{9}  & \multirow{2}{*}{Meñique proximal} & Anódica  & \checkmark \\
                                   &                                   & Catódica & 50/50 \\
             \arrayrulecolor{gray!40}\hline\arrayrulecolor{black}
-            \multirow{2}{*}{ch10} & \multirow{2}{*}{Palma}            & Anódica  & $\times$ \\
+            \multirow{2}{*}{10} & \multirow{2}{*}{Palma}            & Anódica  & $\times$ \\
                                   &                                   & Catódica & \checkmark \\
             \hline
         \end{tabular}
@@ -782,8 +724,13 @@ La Tabla~\ref{tab:umbrales} recoge, para cada canal, la zona palmar objetivo, la
     \label{tab:umbrales}
 \end{table}
 
-Los canales que superaron la validación concuerdan con el mecanismo de sensaciones referidas descrito en la sección~2: la estimulación aplicada en el dorso de la mano se percibe en la zona palmar correspondiente, y no en la zona dorsal donde se sitúan los electrodos. Para estos canales, se anota que la corriente promedia donde se empezó a notar sensación táctil, fue de $3.38~mA$, cifra algo elevada puesto que se acerca al umbral de máxima corriente impuesto.
-Los canales descartados corresponden en su mayoría a zonas anatómicamente próximas entre sí, donde la separación inter-electrodo no es suficiente para aislar completamente la corriente hacia el nervio digital objetivo. Este resultado está en línea con las limitaciones del sistema de doble tierra discutidas en la sección~2, y determina el subconjunto de canales que se podrán emplear en la aplicación de control de la sección~\ref{sec:dron}.
+Los resultados obtenidos muestran un comportamiento divergente respecto a la hipótesis inicial planteada en el Desafío~4 sobre el efecto de la polaridad. Contrariamente a lo esperado, la estimulación catódica no logró evocar la sensación referida en la mayoría de las falanges distales; para los canales 2, 3 y 5 (índice, corazón y meñique distales), esta configuración desvió la percepción hacia la zona dorsal, invalidando su uso. Por el contrario, la estimulación anódica demostró ser la más efectiva para la gran mayoría de los canales digitales (del 2 al 9), logrando activar con éxito las zonas palmares tanto proximales como distales. 
+
+No obstante, la estimulación catódica resultó indispensable para el éxito del canal 1 (pulgar) y el canal 10 (palma), puntos en los cuales la configuración anódica falló al desviar la sensación al dorso o no generar estímulo perceptible ($\times$). El canal 4 (anular distal) fue el único que exhibió una respuesta válida bajo ambas polaridades. 
+
+Por otra parte, se registró que la corriente promedio en la que se comenzó a percibir la sensación táctil en los canales válidos fue de $3.38~mA$. Este umbral resulta notablemente elevado, puesto que se aproxima al límite de $4.5~mA$ impuesto por el diodo limitador de seguridad, lo que restringe el rango dinámico útil para modular la intensidad de la sensación. 
+
+A pesar de la desviación teórica en el comportamiento de la polaridad catódica, la validación perceptiva confirma la viabilidad del diseño: mediante una selección indexada de la polaridad según el canal activo (configuración catódica para los canales 1 y 10, y anódica para el resto), el sistema es capaz de proyectar de forma selectiva y diferenciada el estímulo en las 10 zonas palmares objetivo. Este resultado determina el subconjunto de canales que se podrán emplear en la aplicación de control de la sección~\ref{sec:dron}.
 
 % ==============================================================
 % SECCIÓN: Control de dron como aplicación del sistema háptico
@@ -792,65 +739,49 @@ Los canales descartados corresponden en su mayoría a zonas anatómicamente pró
 \section{Aplicación del sistema: control de un dron con feedback háptico}
 \label{sec:dron}
 
-Como aplicación del sistema desarrollado, para poner a prueba todo el trabajo en su conjunto, se decidió implementarlo como método de control de vuelo de un dron comercial de bajo coste, concretamente el modelo Karuisrc K417, empleando el guante como dispositivo de mando. La elección de esta plataforma responde a que el vuelo de un dron requiere gestionar de forma simultánea cuatro grados de libertad: aceleración, guiñada (\textit{yaw}), cabeceo (\textit{pitch}), alabeo (\textit{roll}). Esto es útil para obligar a activar en paralelo todos los subsistemas del guante: la estimación de orientación mediante el filtro de Mahony, la lectura de los sensores de flexión, el reconocimiento gestual mediante la red neuronal embebida y la retroalimentación háptica electrotáctil. El resultado es un bucle de control en el que el piloto actúa sobre el dron inclinando y girando la mano, mientras usa la posición de los dedos como canal adicional de control, a la vez que el sistema le devuelve información táctil localizada sobre la maniobra que está ejecutando, sin recurrir a ningún tipo de retroalimentación visual del estado del vuelo.
+Como aplicación del sistema desarrollado, para poner a prueba todo el trabajo en su conjunto, se decidió implementarlo como método de control de vuelo de un dron comercial de bajo coste, concretamente el modelo Karuisrc K417, empleando el guante como dispositivo de mando. La elección de esta plataforma responde a que el vuelo de un dron requiere gestionar de forma simultánea cuatro grados de libertad: aceleración (\textit{throttle}), guiñada (\textit{yaw}), cabeceo (\textit{pitch}), alabeo (\textit{roll}). Esto es útil para obligar a activar en paralelo todos los subsistemas del guante: la estimación de orientación mediante el filtro de Mahony, la lectura de los sensores de flexión, el reconocimiento gestual mediante la red neuronal embebida y la retroalimentación háptica electrotáctil. El resultado es un bucle de control en el que el piloto actúa sobre el dron inclinando y girando la mano, mientras usa la posición de los dedos como canal adicional de control, a la vez que el sistema le devuelve información táctil localizada sobre la maniobra que está ejecutando, sin recurrir a ningún tipo de retroalimentación visual del estado del vuelo.
 
 % ------------------------------------------------------------------
 \subsection{Protocolo WiFi de control del dron}
 \label{sec:dron_protocolo}
 % ------------------------------------------------------------------
 
-Para poder mandar ordenes al dron, se usa su punto de acceso Wi-Fi propio, pero el problema es que no dispone de documentación pública sobre su protocolo de comunicación. Para poder controlarlo desde el microcontrolador fue necesario caracterizar dicho protocolo mediante la técnica de captura de tráfico en red local. El procedimiento consistió en conectar un ordenador a la misma red inalámbrica que la aplicación para Android del dron y, mediante scripts desarrollados en Node.js y Python (disponibles en el Anexo \ref{Anexo:A}), interceptar y registrar todos los datagramas UDP que la app enviaba hacia la dirección IP del dron (\texttt{192.168.169.1}) a través del puerto 8800. Actuando sobre los controles de la aplicación de forma sistemática y observando simultáneamente cómo cambiaba el contenido de los paquetes capturados, fue posible asociar cada campo de la trama binaria a la función de vuelo correspondiente.
+Para poder mandar ordenes al dron, se usa su punto de acceso Wi-Fi propio, pero el problema es que no dispone de documentación pública sobre su protocolo de comunicación. Para poder controlarlo desde el microcontrolador fue necesario caracterizar dicho protocolo mediante la captura de tráfico en red local. El procedimiento consistió en conectar un ordenador a la misma red inalámbrica que la aplicación para Android del dron y, mediante scripts desarrollados en Node.js y Python (disponibles en el Anexo \ref{Anexo:A}), interceptar y registrar todos los datagramas \gls{udp} que la app enviaba hacia la dirección IP del dron 192.168.169.1 a través del puerto 8800. Actuando sobre los controles de la aplicación de forma sistemática y observando simultáneamente cómo cambiaba el contenido de los paquetes capturados, fue posible asociar cada campo de la cadena binaria a la función de vuelo correspondiente.
 
 El análisis reveló que cada mensaje de control tiene una longitud fija de 124 bytes y está estructurado en cuatro bloques lógicos separados por campos de verificación y contadores de secuencia. La Tabla~\ref{tab:pkt_estructura} resume la organización del datagrama identificada en este proceso.
 
 \begin{table}[htbp]
 \centering
-\caption{Estructura del datagrama UDP de 124 bytes del protocolo K417.}
+\caption{Estructura del datagrama \gls{udp} de 124\,bytes del protocolo K417.}
 \label{tab:pkt_estructura}
-\begin{tabular}{clcc}
-\hline
-\textbf{Bloque} & \textbf{Contenido} & \textbf{Bytes} & \textbf{Naturaleza} \\
-\hline
-Cabecera        & Identificador de sincronización            & 12 & Fijo \\
-C1              & Ejes de control + comando + \textit{headless} & 32 & Variable \\
-\textit{Checksum} & Prefijo fijo + contadores de secuencia   & 14 & Variable \\
-C2              & Repetición de ejes + campos de estado      & 32 & Variable \\
-C3              & Información de estado adicional            & 34 & Variable \\
-\hline
-\textbf{Total}  &                                            & \textbf{124} & \\
-\hline
-\end{tabular}
-\end{table}
-
-\begin{table}[htbp]
-\centering
-\caption{Estructura del datagrama UDP de 124 bytes del protocolo K417.}
-\label{tab:pkt_estructura2}
-\resizebox{\textwidth}{!}{%
-\begin{tabular}{clccp{6cm}}
-\hline
-\textbf{Bloque} & \textbf{Contenido} & \textbf{Bytes} & \textbf{Naturaleza} & \textbf{Detalle} \\
-\hline
-Cabecera & Identificador de sincronización & 12 & Fijo & \texttt{0xEF 0x02 0x7C \ldots} constante en todos los paquetes \\
-\hline
-\multirow{6}{*}{C1} & Alabeo, cabeceo, acelerador, guiñada & 4 & Variable & Enteros sin signo en [40,\,220]; neutro = 128 \\
-                    & Comando especial & 1 & Variable & 0x00 normal, 0x01 despegue, 0x02 aterrizaje/parada, 0x04 calibración, 0x05 cámara \\
-                    & Modo sin cabeza  & 1 & Variable & 0x02 off, 0x03 on; OR 0x08 activa acrobacia en ambos bytes \\
-                    & Relleno          & 10 & Fijo    & Ceros \\
-                    & \textit{Checksum} & 1 & Variable & XOR de los 6 bytes de control anteriores \\
-                    & Sufijo           & 6 & Fijo     & \texttt{0x00 0x00 0x14 0x00 0x66 0x14} \\
-\hline
-Checksum & Prefijo fijo + contadores de secuencia & 14 & Variable & Tres contadores de 16 bits (\texttt{ctr1, ctr2, ctr3}) que se incrementan en cada envío \\
-\hline
-C2 & Contador \texttt{ctr2} + sufijo fijo & 32 & Variable & 
-    Primeros 2 bytes: contador de secuencia; resto fijo (\texttt{C2\_SUFFIX}) \\
-C3 & Contador \texttt{ctr3} + sufijo fijo & 34 & Variable & 
-    Primeros 2 bytes: contador de secuencia; resto fijo (\texttt{C3\_SUFFIX}) \\
-\hline
+\setlength{\tabcolsep}{8pt}
+\renewcommand{\arraystretch}{1.25}
+\begin{tabular}{@{}llccp{5.2cm}@{}}
+\toprule
+\textbf{Bloque} & \textbf{Campo} & \textbf{Bytes} & \textbf{Naturaleza} & \textbf{Descripción} \\
+\midrule
+Cabecera
+  & Sincronización     & 12 & Fijo     & Constante \texttt{0xEF\,0x02\,\ldots} \\
+\midrule
+\rowcolor{rowgray}
+\multirow{4}{*}{C1}
+  & Ejes de vuelo      &  4 & Variable & Roll, pitch, yaw, throttle como \texttt{uint8} en $[40,220]$; neutro = 128 \\
+  & Comando especial   &  1 & Variable & Despegue, aterrizaje, parada, calibración (ver Tabla~\ref{tab:pkt_comandos}) \\
+\rowcolor{rowgray}
+  & Modo \textit{headless} / acrobacia & 1 & Variable & \texttt{0x02} off, \texttt{0x03} on; OR \texttt{0x08} activa acrobacia \\
+  & Relleno + CRC      & 17 & Fijo/Var.& 10\,B de ceros + XOR de los 6\,bytes de control + sufijo fijo \\
+\midrule
+Checksum
+  & Contadores de sec. & 14 & Variable & Prefijo fijo + tres contadores de 16\,bits (\texttt{ctr1}, \texttt{ctr2}, \texttt{ctr3}) \\
+\midrule
+C2
+  & \texttt{ctr2} + sufijo & 32 & Variable & Primeros 2\,bytes: contador de secuencia; resto sufijo \\
+C3
+  & \texttt{ctr3} + sufijo & 34 & Variable & Primeros 2\,bytes: contador de secuencia; resto sufijo \\
+\midrule
 \textbf{Total} & & \textbf{124} & & \\
-\hline
-\end{tabular}%
-}
+\bottomrule
+\end{tabular}
 \end{table}
 
 Dentro del bloque C1 se sitúan los cuatro bytes de ejes de vuelo, cada uno codificado como un entero sin signo en el rango $[40,\,220]$, donde el valor 128 representa el punto neutro. El mismo bloque alberga un byte de comando especial, que puede tomar valores predefinidos para ordenar el despegue automático, el aterrizaje, la calibración de la \gls{imu} interna del dron, el movimiento de la cámara o el inicio de una acrobacia, y un byte de modo sin cabeza (\textit{headless}), que controla si el dron interpreta los ejes de traslación respecto a su propia orientación instantánea o respecto a la que tenía en el momento del despegue. Los bloques C2 y C3 repiten parte de la información de vuelo con campos de estado adicionales y cierran el datagrama con un sufijo de bytes de valor fijo que actúa como delimitador. La Tabla~\ref{tab:pkt_comandos} recoge los valores del byte de comando especial identificados durante la captura y su significado.
@@ -865,110 +796,58 @@ Dentro del bloque C1 se sitúan los cuatro bytes de ejes de vuelo, cada uno codi
 \hline
 \texttt{0x00} & \texttt{CMD\_NONE}        & Ninguna (control normal)    \\
 \texttt{0x01} & \texttt{CMD\_TAKEOFF}     & Despegue automático         \\
-\texttt{0x02} & \texttt{CMD\_LAND}        & Aterrizaje suave   \\
+\texttt{0x02} & \texttt{CMD\_STOP}        & Parar motores   \\
 \texttt{0x04} & \texttt{CMD\_CALIBRATE}   & Calibración de la IMU del dron \\
-\texttt{0x05} & \texttt{CMD\_STOP}     & Parar motores              \\
-\texttt{0x08} & \texttt{SOMERSAULT\_FLAG} & Activar modo acrobacia) \\
+\texttt{0x05} & \texttt{CMD\_LAND}     & Aterrizaje suave              \\
+\texttt{0x08} & \texttt{SOMERSAULT\_FLAG} & Activar modo acrobacia \\
 \hline
 \end{tabular}
 \end{table}
 
+Para realizar la maniobra de acrobacia, a parte de mandar el valor \texttt{0x08} en el byte de comando, hay que lleva a cabo un proceso extra para que el dron de piruetas mediante un sistema de dos fases. Durante la primera fase de impulso, se envían 20 paquetes consecutivos con el indicador de acrobacia activado en el byte de comando y el acelerador forzado a 212 sobre el máximo de 220, con el fin de dotar al dron del empuje necesario para completar el giro. Superado ese bloque de paquetes, se entra en la fase de recuperación, en la que se envían 10 paquetes adicionales con el acelerador reducido a 204 para estabilizar el vuelo antes de devolver el control al lazo normal. Durante las dos fases, los ejes de traslación permanecen congelados en los valores previos para impedir que movimientos involuntarios de la mano generen comandos espurios durante la maniobra.
 % ------------------------------------------------------------------
 \subsection{Bucle de control}
 \label{sec:dron_bucle}
 % ------------------------------------------------------------------
 
-La totalidad del procesamiento se ejecuta en el microcontrolador Arduino Nano RP2040 Connect sin intervención de ningún sistema externo. El bucle principal opera a dos cadencias independientes: los paquetes de control se envían al dron a 40~Hz y la telemetría de diagnóstico se emite por el puerto serie a 25~Hz, evitando así que la carga de comunicación serie interfiera con el lazo de vuelo. La Figura~\ref{fig:dron_bucle} ilustra el flujo completo de procesamiento en cada iteración.
+La totalidad del procesamiento y comunicación con el dron se ejecuta en el microcontrolador Arduino Nano RP2040 Connect sin intervención de ningún sistema externo. El bucle principal envía los paquetes de control al dron a 40\,Hz, y la red neuronal realiza una predicción cada 80\,ms, mientras el resto del procesamiento se mantiene a 100\,Hz. En esta sección se describen las etapas que se ejecutan en cada iteración del bucle, desde la lectura de sensores hasta el envío de comandos al dron y la actualización de la retroalimentación háptica.
 
-% ---- FIGURA: diagrama de flujo del bucle de control ----
-\begin{figure}[htbp]
-  \centering
-  \includegraphics[width=0.82\textwidth]{Imagenes/dron_bucle_control}
-  \caption{Diagrama de flujo del bucle de control embebido ejecutado a 40~Hz.}
-  \label{fig:dron_bucle}
-\end{figure}
+\subsubsection{Estimación de orientación.} Al inicio de cada iteración se leen las medidas de acelerómetro y giroscopio del sensor LSM6DSOX y se integran en el filtro de Mahony para actualizar el cuaternión de orientación. Durante la fase de calibración inicial, que comprende 200 muestras tomadas con el guante en reposo, se estiman y corrigen los sesgos de \textit{offset} del giroscopio. El filtro opera con ganancia proporcional $K_p = 3{.}5$ y ganancia integral $K_i = 0{.}03$, valores que experimentalmente se ha comprobado que proporcionan una convergencia rápida de la estimación frente a las perturbaciones de aceleración que se producen durante el movimiento de la mano.
 
-\paragraph{Estimación de orientación.}
-Al inicio de cada iteración se leen las medidas de acelerómetro y giroscopio del sensor LSM6DSOX y se integran en el filtro de Mahony para actualizar el cuaternión de orientación. Durante la fase de calibración inicial, que comprende 200 muestras tomadas con el guante en reposo, se estiman y corrigen los sesgos de \textit{offset} del giroscopio. El filtro opera con ganancia proporcional $K_p = 3{,}5$ y ganancia integral $K_i = 0{,}03$, valores que garantizan una convergencia rápida de la estimación frente a las perturbaciones de aceleración lineal que se producen durante el movimiento de la mano.
+\subsubsection{Mapeo de orientación a ejes de vuelo.}
+A partir del cuaternión se extraen los ángulos de Euler de \textit{yaw}, \textit{pitch} y \textit{roll}. Antes de convertirlos en los bytes del joystick virtual se aplica sobre cada eje un procesamiento extra que se ha calibrado para optimizar el control del vuelo: una zona muerta de $10^\circ$ que cancela las desviaciones de orientación menores para suprimir temblores de la mano; una función de exposición no lineal que suaviza la respuesta en torno al punto neutro y la amplifica en los extremos del recorrido; y un escalado lineal que convierte el ángulo resultante, acotado a un máximo de $45^\circ$, al rango entero $[40,\,220]$ con 128 como valor neutro.
 
-\paragraph{Mapeo de orientación a ejes de vuelo.}
-A partir del cuaternión se extraen los ángulos de Euler de guiñada, cabeceo y alabeo. Antes de convertirlos en los bytes del joystick virtual se aplica sobre cada eje una cadena de acondicionamiento en tres etapas: una zona muerta de $8°$ que cancela las desviaciones de orientación menores para suprimir el temblor fisiológico de la mano; una función de exposición no lineal que suaviza la respuesta en torno al punto neutro y la amplifica en los extremos del recorrido; y un escalado lineal que convierte el ángulo resultante, acotado a un máximo de $45°$, al rango entero $[40,\,220]$ con 128 como valor neutro.
+\subsubsection{Control del acelerador mediante sensores de flexión.}
+Los dos piezoresistivos que no han sido usados en el clasificador de gestos se usan finalmente para controlar el \textit{throttle} (acelerador). Así, las entradas analógicas A2 (flexión del dedo índice) y A3 (flexión del dedo corazón) controlan el nivel de aceleración vertical del dron. La diferencia entre sus lecturas normalizadas, calculada respecto a la media y desviación típica registradas durante la calibración, se filtra mediante un promedio exponencial de primer orden con coeficiente $\alpha = 0{.}12$ para eliminar transitorios bruscos y se mapea al mismo rango $[40,\,220]$.
 
-\paragraph{Control del acelerador mediante sensores de flexión.}
-El canal de acelerador no se deriva de la orientación de la mano sino de dos sensores de flexión dedicados, conectados a las entradas analógicas A2 (gas positivo) y A3 (gas negativo). La diferencia entre sus lecturas normalizadas, calculada respecto a la media y desviación típica registradas durante la calibración, se filtra mediante un promedio exponencial de primer orden con coeficiente $\alpha = 0{,}12$ para eliminar transitorios bruscos y se mapea al mismo rango $[40,\,220]$.
-
-\paragraph{Reconocimiento gestual y comandos discretos.}
-La red neuronal \textit{fully-connected} embebida procesa a aproximadamente 12~Hz las lecturas normalizadas de los cuatro sensores de flexión y produce una estimación de la clase gestual activa entre nueve posibles. Para reducir la tasa de falsos positivos, el firmware exige que la clase predicha se mantenga estable durante al menos 350~ms y que el margen de confianza supere un umbral mínimo antes de activar el comando de vuelo asociado. Una vez disparado un comando, se impone un período de bloqueo de 900~ms durante el cual no puede activarse ninguna acción nueva. La Tabla~\ref{tab:nn_gestos} relaciona las clases gestuales con los comandos de vuelo y el patrón de retroalimentación háptica emitido como confirmación.
+\subsubsection{Reconocimiento gestual y comandos discretos.}
+La red neuronal \textit{fully-connected} embebida procesa a aproximadamente 12.5~Hz (cada 80.0~ms) las lecturas normalizadas de los cuatro sensores de flexión y produce una estimación del gesto activo entre nueve posibles. Para reducir la tasa de falsos positivos, el firmware exige que la clase predicha se mantenga estable durante al menos 350~ms y que el margen de confianza supere un umbral mínimo antes de activar el comando de vuelo asociado. Una vez ejecutado un comando, se impone un período de bloqueo de 900~ms durante el cual no puede activarse ninguna acción nueva. La Tabla~\ref{tab:nn_gestos} relaciona las clases gestuales con los comandos de vuelo.
 
 \begin{table}[htbp]
 \centering
-\caption{Correspondencia entre clase gestual, comando de vuelo y retroalimentación háptica de confirmación.}
+\caption[Correspondencia entre clase gestual, comando de vuelo y retroalimentación háptica de confirmación]{Correspondencia entre clase gestual, comando de vuelo y retroalimentación háptica de confirmación. Para ver qué posición corresponde a cada clase, ver Figura~\ref{fig:posiciones_dataset}.}
 \label{tab:nn_gestos}
-\begin{tabular}{clll}
+\begin{tabular}{cl}
 \hline
-\textbf{Clase} & \textbf{Comando de vuelo} & \textbf{Zona háptica} & \textbf{Modo} \\
+\textbf{Posición} & \textbf{Comando de vuelo} \\
 \hline
-0 & Reposo (sin acción)                        & ---                 & ---            \\
-1 & Despegue automático                        & Palma (M20)         & Ráfaga $\times 1$ \\
-2 & Aterrizaje suave                           & Palma (M20)         & Ráfaga $\times 1$ \\
-3 & Parada de emergencia                       & Palma (M20)         & Ráfaga $\times 3$ \\
-4 & Calibración IMU dron                       & Índice (M8)         & Ráfaga $\times 1$ \\
-5 & Activar/desactivar modo \textit{headless}  & Pulgar (M4)         & Ráfaga $\times 1$ \\
-6 & Elevar cámara                              & Índice (M8)         & Ráfaga $\times 1$ \\
-7 & Acrobacia (\textit{flip})                  & Medio-anular (M12)  & Ráfaga $\times 3$ \\
-8 & Modo acrobacia latente                     & ---                 & ---            \\
-\hline
-\end{tabular}
-\end{table}
-
-% ------------------------------------------------------------------
-\subsection{Secuencia de acrobacia}
-\label{sec:dron_flip}
-% ------------------------------------------------------------------
-
-La maniobra de acrobacia merece una descripción específica por su mayor complejidad temporal. Cuando el gesto correspondiente supera los umbrales de estabilidad y confianza, el firmware congela los valores actuales de los cuatro ejes de vuelo y entra en una máquina de estados de dos fases. Durante la primera fase, denominada de impulso, se envían 20 paquetes consecutivos con el indicador de acrobacia activado en el byte de comando y el acelerador forzado a 212 sobre el máximo de 220, con el fin de dotar al dron del empuje necesario para completar el giro. Superado ese bloque de paquetes, se entra en la fase de recuperación, en la que se envían 10 paquetes adicionales con el acelerador reducido a 204 para estabilizar el vuelo antes de devolver el control al lazo normal. Durante las dos fases, los ejes de traslación permanecen congelados en los valores previos para impedir que movimientos involuntarios de la mano generen comandos espurios durante la maniobra.
-
-% ------------------------------------------------------------------
-\subsection{Retroalimentación háptica durante el vuelo}
-\label{sec:haptic_drone}
-% ------------------------------------------------------------------
-
-La retroalimentación háptica cierra el lazo sensoriomotor informando al piloto, a través de la estimulación electrotáctil, sobre el estado de cada uno de los ejes de vuelo que está generando con la mano. El principio de diseño adoptado establece una correspondencia unívoca entre eje de control y zona anatómica, de modo que el piloto puede distinguir táctilmente qué canal está activo sin necesidad de apartar la vista del dron. La Tabla~\ref{tab:haptic_mapeo} resume esta correspondencia junto con los parámetros de estimulación empleados en cada canal, y la Figura~\ref{fig:dron_mapa_haptico} ilustra la distribución de las zonas sobre el dorso de la mano.
-
-\begin{table}[htbp]
-\centering
-\caption{Correspondencia entre eje de vuelo, zona anatómica y parámetros del canal háptico.}
-\label{tab:haptic_mapeo}
-\begin{tabular}{lllcc}
-\hline
-\textbf{Eje de vuelo} & \textbf{Zona anatómica} & \textbf{Posición HV2701} & \textbf{Pot. mín.} & \textbf{Pot. máx.} \\
-\hline
-Guiñada (\textit{yaw})         & Región del pulgar      & M4  (canal 2)  & 16 & 25 \\
-Cabeceo (\textit{pitch})       & Región del índice      & M8  (canal 3)  & 23 & 28 \\
-Alabeo (\textit{roll})         & Región medio-anular    & M12 (canal 4)  & 28 & 35 \\
-Acelerador (\textit{throttle}) & Región de la palma     & M20 (canal 10) & 14 & 20 \\
+0 & Sin acción \texttt{0x00}\\
+1 & Parar motor \texttt{0x02}\\
+2 & Aterrizaje \texttt{0x05}\\
+3 & Despegue \texttt{0x01}\\
+4 & Reset \gls{imu} Arduino\\
+5 & Modo \textit{headless} ON/OFF\\
+6 & Calibrar \gls{imu} dron \texttt{0x04} \\
+7 & Modo acrobacia ON \texttt{0x08}\\
+8 & --- \\
 \hline
 \end{tabular}
 \end{table}
 
-% ---- FIGURA: mapa anatómico de estimulación ----
-% Sustituir el bloque \fbox por \includegraphics cuando la figura esté disponible.
-\begin{figure}[htbp]
-  \centering
-  % \includegraphics[width=0.52\textwidth]{Imagenes/dron_mapa_haptico}
-  \fbox{\parbox{0.52\textwidth}{\centering\vspace{2.5cm}
-    [FIGURA: Dorso de la mano con las cuatro zonas de estimulación\\
-    electrotáctil señaladas:\\
-    pulgar $\leftrightarrow$ yaw, índice $\leftrightarrow$ pitch,\\
-    medio-anular $\leftrightarrow$ roll, palma $\leftrightarrow$ throttle.]
-  \vspace{2.5cm}}}
-  \caption{Distribución de las cuatro zonas de retroalimentación háptica sobre el dorso de la mano para el control del dron.}
-  \label{fig:dron_mapa_haptico}
-\end{figure}
+\subsubsection{Actualización de la retroalimentación háptica.}
+Una vez calculados los valores de los cuatro ejes de vuelo y resueltas las acciones del clasificador, el firmware procesa el estado de la estimulación táctil. En este punto del ciclo se determina si corresponde activar una ráfaga corta de confirmación o si se debe modular el tren de pulsos continuo según la desviación de los ejes virtuales. Dado que este bloque gestiona directamente la interfaz física con el usuario, la lógica interna de multiplexado, el mapa de zonas anatómicas y los parámetros eléctricos de los estímulos se delegan y detallan en profundidad en la Sección~\ref{sec:haptic_drone}.
 
-El sistema de retroalimentación opera a una cadencia de actualización de 100~Hz. En cada ciclo el firmware normaliza el valor de cada eje al rango $[0,\,1]$ y evalúa si supera el umbral neutro. Si al menos uno de los cuatro ejes está activo, se selecciona mediante un esquema de turno rotatorio el canal correspondiente: se escribe la palabra de 16 bits de la posición elegida en el HV2701 para conectar los electrodos de esa zona, se ajusta el potenciómetro digital MAX5413 al valor de intensidad asignado a ese canal y se lanza un tren de pulsos de 100~Hz con una anchura de pulso de 400~µs y una duración de 2~s. El esquema rotatorio garantiza que ningún canal monopolice el hardware de estimulación cuando varios ejes están activos de forma simultánea. Si todos los ejes vuelven a la posición neutra, la estimulación se detiene inmediatamente.
-
-Para los comandos discretos generados por reconocimiento gestual se emplea una modalidad diferente: una ráfaga corta de pulsos en la zona anatómica asociada al gesto activado, cuyo número varía según la relevancia del comando. Una ráfaga de un pulso confirma comandos habituales como el despegue o el aterrizaje, mientras que una ráfaga de tres pulsos se reserva para maniobras de mayor impacto, como la parada de emergencia o la acrobacia, lo que permite al piloto distinguirlas táctilmente sin ambigüedad. Durante el tiempo que dura la ráfaga, un temporizador de bloqueo impide que el canal de retroalimentación continua se active, evitando solapamientos entre los dos modos de estimulación. Por último, durante la ejecución de la secuencia de acrobacia, toda la retroalimentación háptica se suspende de forma completa, dado que los ejes de control se encuentran artificialmente congelados y cualquier estímulo generado en ese instante carecería de correlación con el estado real del vuelo.
+Finalmente, la Tabla~\ref{tab:tiempos_bucle_horizontal} recoge el tiempo de ejecución medido para cada etapa del ciclo. El tiempo total es de aproximadamente 6{.}88\,ms, lo que garantiza que el bucle puede ejecutarse a 40\,Hz sin riesgo de retrasos. La condición de 100\,Hz impuesta por la librería de la \gls{imu} también se cumple, por lo que el sistema es capaz de procesar toda la información sensorial, ejecutar la red neuronal y generar la retroalimentación háptica a una cadencia suficiente para el control de vuelo en tiempo real. Cabe destacar que la tabla indica el ciclo más lento posible, ya que el envio WiFi se da solo en cuatro de cada diez ciclos debido a que opera a 40\,Hz, y el de la red neuronal se da en uno de cada ocho puesto que funciona a 12{.}5\,Hz, mientras que el resto de etapas se ejecutan en cada iteración a 100\,Hz. Por lo tanto, en todos los ciclos donde no haya envio WiFi ni clasificación de la red neuronal, el ciclo cumple la condición de 10\,ms con aun mayor holgura.
 
 \begin{table}[htbp]
 \centering
@@ -979,14 +858,66 @@ Para los comandos discretos generados por reconocimiento gestual se emplea una m
 \hline
 \rowcolor{light-gray} & \textbf{IMU (Lectura y Filtro)} & \textbf{ADC} & \textbf{Red Neuronal} & \textbf{Lógica CPU} & \textbf{Envío WiFi} & \textbf{Hápticos} & \textbf{Otros} & \textbf{TOTAL} \\ \hline
 \textbf{Tiempo (ms)} & 3.494 & 0.083 & 1.415 & 0.212 & 2.115 & 0.403 & 0.039 & \textbf{6.880} \\ \hline
-\end{tabular}% <--- ¡Llave corregida aquí!
+\end{tabular}
 }
 \end{table}
 
+
+% ------------------------------------------------------------------
+\subsection{Retroalimentación háptica durante el vuelo}
+\label{sec:haptic_drone}
+% ------------------------------------------------------------------
+
+Partiendo de la información generada en el bucle de control, la retroalimentación háptica informa al piloto del estado de los ejes continuos y confirma los comandos de vuelo discretos reconocidos por el clasificador gestual, todo ello mediante estimulación electrotáctil sobre el dorso de la mano. Cada eje de control y cada acción gestual tienen asignada una zona anatómica distinta, de modo que el piloto puede interpretar táctilmente el comportamiento del sistema sin apartar la vista del dron. La Tabla~\ref{tab:haptic_mapeo} recoge el esquema completo, con las posiciones de la matriz de conmutación HV2701 y los parámetros de estímulo correspondientes, entre ellos el valor $\mathrm{P}$ del potenciómetro que el autor calibró según las preferencias individuales.
+
+\begin{table}[htbp]
+\centering
+\caption{Esquema de retroalimentación háptica: ejes de control continuo y comandos discretos del clasificador gestual.}
+\label{tab:haptic_mapeo}
+\resizebox{\textwidth}{!}{%
+\begin{tabular}{lllc}
+\toprule
+\textbf{Eje / Clase gestual} & \textbf{Zona anatómica} & \textbf{Posición HV2701} & \textbf{Estímulo} \\
+\midrule
+\multicolumn{4}{l}{\textbf{Canales continuos (tren de pulsos a 100\,Hz, 400\,\textmu{}s)}} \\
+\textit{Yaw} (Rotación horizontal)       & Pulgar       & M4  & Tren ($\mathrm{P} \in [16-25]$) \\
+\textit{Pitch} (Avance / retroceso)      & Índice       & M8  & Tren ($\mathrm{P} \in [23-28]$) \\
+\textit{Roll} (Desplazamiento lateral)   & Medio-anular & M12 & Tren ($\mathrm{P} \in [28-35]$) \\
+\textit{Throttle} (Aceleración vertical) & Palma        & M20 & Tren ($\mathrm{P} \in [14-20]$) \\
+\midrule
+\multicolumn{4}{l}{\textbf{Comandos discretos (ráfagas de pulsos, 50\,ms ON)}} \\
+Clase 0: Neutro                               & —            & —   & Sin estímulo \\
+Clase 1: Parar motor & Palma        & M20 & Ráfaga (1 pulso,  $\mathrm{P} = 18$) \\
+Clase 2: Aterrizaje       & Índice       & M8  & Ráfaga (1 pulso,  $\mathrm{P} =25$) \\
+Clase 3: Despegue            & Pulgar       & M4  & Ráfaga (1 pulso,  $\mathrm{P} =20$) \\
+Clase 4: Reset \gls{imu} Arduino             & Medio-anular & M12 & Ráfaga (1 pulso,  $\mathrm{P} =30$) \\
+Clase 5: Modo \textit{headless} ON/OFF & Índice       & M8  & Ráfaga (3 pulsos,  $\mathrm{P} =25$) \\
+Clase 6: Calibrar IMU dron                 &  Medio-anular & M12 & Ráfaga (3 pulsos, $\mathrm{P} =30$) \\
+Clase 7: Modo acrobacia ON                & Palma        & M20 & Ráfaga (3 pulsos, $\mathrm{P} =18$) \\
+Clase 8: Sin acción asignada                  & —            & —   & Sin estímulo \\
+\bottomrule
+\end{tabular}
+}
+\end{table}
+
+La retroalimentación continua opera a una cadencia de 10\,ms. En cada ciclo se calcula la desviación de cada eje respecto al neutro y se normaliza al rango $[0,\,1]$. Este valor se mapea de forma inversa sobre el rango de potenciómetro asignado a la zona correspondiente: a mayor desviación, menor resistencia y, por tanto, mayor intensidad de estímulo. Cuando varios ejes están activos simultáneamente, la simultaneidad no se implementa manteniendo un tren continuo común mientras se conmuta el HV2701, sino serializando la estimulación en pulsos individuales. En cada pulso, el firmware fuerza primero el cierre de la matriz, ajusta el potenciómetro MAX5413 al valor del eje seleccionado, habilita únicamente la ruta correspondiente durante el ancho de pulso y vuelve a abrir la matriz antes de pasar al siguiente eje activo. La selección de ejes sigue un recorrido circular entre los canales activos, de modo que todos reciben pulsos periódicos sin solapamiento eléctrico directo. Cuando todos los ejes vuelven al neutro, la secuencia se detiene de forma inmediata.
+
+Cuando el clasificador reconoce un comando discreto, se interrumpe la señal de tren y se emite una ráfaga de pulsos de 50\,ms en la zona anatómica asociada a dicha acción. Un temporizador de bloqueo calculado a partir de la duración total de la ráfaga impide cualquier solapamiento con la estimulación continua hasta que esta concluye. El número de pulsos de la ráfaga diferencia unos eventos de otros: un pulso confirma acciones operativas estándar como el despegue, el aterrizaje o el reset de la orientación, mientras que tres pulsos se reservan para eventos como la activación del modo acrobacia o la conmutación del modo \textit{headless}. Durante la ejecución física de una maniobra de acrobacia, toda la retroalimentación háptica se suspende, ya que los ejes de control están congelados por el secuenciador de recuperación y el estímulo no aportaría información útil al piloto.
+
 \section{Conclusiones y trabajo futuro}
+\label{sec:conclusiones}
 
-Se acabo el master
+En lineas generales, este trabajo ha servido como plataforma para poner a prueba un sistema donde se integran la parte de sensado y actuación electrónica en un dispositivo portátil, la parte de procesamiento de señal y aprendizaje automático en un microcontrolador embebido, y la parte de ingeniería inversa de protocolos de comunicación Wi-Fi para controlar un dron comercial. El resultado es un sistema funcional que permite controlar el vuelo de un dron mediante gestos de la mano con retroalimentación háptica localizada, lo que demuestra la viabilidad de esta tecnología para aplicaciones de control remoto.
 
+Respecto al trabajo previo, se ha mejorado la parte de proceesado de datos de la \gls{imu}, consiguiendo un resultado muy robusto frente a problemas típicos de este tipo de sensores, usando además funciones computacionalmente eficientes que permiten su ejecución en tiempo real en el microcontrolador. En cuanto a la parte de aprendizaje automático, se ha conseguido implementar un clasificador de gestos igual de funcional a pesar de reducir la dimensión de los datos de entrada a la mitad, cosa que ha permitido usar esos ejes en otras tareas de control.
+
+Para poner a prueba el sistema en su conjunto, la aplicación de control de un dron comercial ha servido para validar la integración de todos los bloques funcionales y demostrar su utilidad en una tarea compleja que requiere gestionar múltiples grados de libertad en tiempo real y con una gran sensibilidad al tratarse de un dispositivo volador. El proceso de ingeniería inversa del protocolo Wi-Fi del dron ha sido un desafío técnico importante, pero ha permitido obtener un control total sobre la plataforma sin necesidad de hardware adicional.
+
+Como linea futura, en este trabajo se ha dejado inexplorada la experimentación de distintos tipos de señales electricas para la estimulación electrotáctil, por lo que un estudio sistemático de parámetros como la frecuencia, la duración de los pulsos, la forma de onda o el número de pulsos en cada ráfaga podría optimizar la percepción táctil y ampliar el tipo de sensaciones que se pueden generar. Además, que los electrodos tuvieran que entrar en el guante ha supuesto que el sistema pueda resultar algo aparatoso, pero esto en dificil de evitar ya que requeriria del uso de un sistema de detección de flexión de los dedos completamente nuevo que prescindiera de dicha prenda.
+
+Como mejora de hardware, se podria cambiar el potenciometro usado por uno de menor resistencia nominal, ya que los valores de $\mathrm{P}$ usados se encuentran en la parte donde la curva es más pronunciada, haciendo que los saltos de corriente entre bits sean muy grandes. Además, para poder experimentar con señales electricas de estimulación, habría que cambiar el microcontrolador usado por otro que disponga de un \gls{dac} integrado, o añadir circuiteria externa que fuera capaz de generar señales.
+
+En definitiva, este trabajo ha servido para demostrar la viabilidad de un sistema de control remoto con retroalimentación háptica basado en un guante sensorizado y un microcontrolador embebido, y ha abierto la puerta a futuras mejoras tanto en la parte de estimulación táctil como en la parte de hardware para optimizar su rendimiento y comodidad de uso.
 
 %------------------ BIBLIOGRAFÍA ------------------
 \newpage
@@ -1002,13 +933,28 @@ Se acabo el master
 
 \begin{appendices}
 
-\section{Repositorio de Git-Hub}
+\section{Repositorio de GitHub}
 \label{Anexo:A}
-\lipsum[2]
 
-\section{GUI de control del dron}
-\lipsum[3]
+Todo el código desarrollado y utilizado durante este Trabajo Fin de Máster se encuentra disponible en el repositorio público:
 
+\begin{center}
+\url{https://github.com/unax4/Haptic-stimulation-and-drone-control}
+\end{center}
+
+Este repositorio actúa como material complementario de la memoria y recoge tanto el código final empleado en la integración del guante háptico como los programas intermedios usados durante el desarrollo, la validación y la caracterización del sistema. En él se incluyen los firmwares para Arduino, los scripts de adquisición y análisis, los modelos de reconocimiento gestual, las herramientas de control de dron y los programas utilizados para estudiar y descifrar el protocolo de comunicación Wi-Fi del dron comercial.
+
+La parte principal del trabajo está recogida en los proyectos asociados al dron Karuisrc K417, ya que este fue el modelo finalmente utilizado para la demostración completa descrita en la Sección~\ref{sec:dron}. En particular, la carpeta \texttt{drone\_k417\_module/} contiene la versión modular del firmware embebido que integra todos los bloques funcionales del sistema: estimación de orientación mediante \gls{imu}, lectura de sensores de flexión, inferencia de la red neuronal, generación de comandos de vuelo, envío de paquetes \gls{udp} al dron y control de la estimulación electrotáctil. El archivo principal \texttt{drone\_k417\_module.ino} organiza el bucle de ejecución, mientras que los ficheros de cabecera separan la lógica de orientación, protocolo, estado, comunicación serie, red neuronal y háptica.
+
+El repositorio conserva también implementaciones para el dron E58 en las carpetas \texttt{drone\_e58/} y \texttt{drone\_e58\_module/}. Estas versiones se mantuvieron como plataforma de pruebas y comparación, ya que durante el desarrollo se estudiaron distintos modelos de dron compatibles con el protocolo Wi-Fi e58 antes de cerrar la integración final con el K417. Su inclusión permite consultar la evolución del sistema y reutilizar partes del código en plataformas con protocolos similares.
+
+Una parte importante del repositorio corresponde al proceso de ingeniería inversa del protocolo Wi-Fi del dron. Debido a que el fabricante no proporciona documentación pública de los paquetes de control, fue necesario capturar el tráfico generado por la aplicación móvil original, registrar los datagramas \gls{udp} y comparar los cambios de bytes al accionar cada mando de la interfaz. Los scripts de captura, prueba y reconstrucción incluidos en las carpetas de experimentación, junto con documentos como \texttt{K417\_PROTOCOL.md} y \texttt{E58\_WIFI\_PROTOCOL.md}, recogen este proceso. En ellos se documentan las direcciones IP y puertos empleados, la estructura de los paquetes, los bytes asociados a los ejes de vuelo y los comandos especiales como despegue, aterrizaje, calibración, modo \textit{headless} y acrobacia.
+
+Además del firmware embebido, se incluyen programas en Python para el control y monitorización desde ordenador. Estos scripts se usaron en fases previas para enviar comandos al dron, visualizar telemetría, comprobar el vídeo recibido, estimar distancias mediante visión por computador y validar de forma aislada partes del sistema antes de trasladarlas al microcontrolador.
+
+La carpeta \texttt{neural/}, presente en varios de los proyectos, contiene los datos y herramientas asociados al reconocimiento de posturas de la mano. En ella se incluyen los \textit{datasets} generados con los sensores piezorresistivos, los scripts de entrenamiento, los modelos exportados en formato TensorFlow Lite y las cabeceras generadas para su integración con la librería de inferencia embebida. Estos archivos corresponden al clasificador descrito en la memoria y permiten reproducir el flujo completo desde la adquisición de datos hasta la ejecución de la red neuronal en el Arduino Nano RP2040 Connect.
+
+Por último, el repositorio contiene documentación auxiliar del sistema háptico, código de prueba de la etapa de estimulación y versiones históricas que se conservaron para trazabilidad. Aunque no todos los archivos forman parte de la versión final cargada en el prototipo, se han mantenido porque muestran el proceso completo de desarrollo: desde las primeras pruebas del guante y la fuente de estimulación hasta la integración del control de vuelo con realimentación táctil. De este modo, el repositorio proporciona tanto el código final, como el contexto técnico necesario para comprender cómo se obtuvo, validó y depuró la solución presentada en este trabajo.
 \end{appendices}
 
 \end{document}

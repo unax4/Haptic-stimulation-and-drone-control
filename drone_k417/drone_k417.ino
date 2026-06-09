@@ -177,7 +177,7 @@ uint16_t hapticHvState = 0x0000;
 volatile bool haptic_spi_busy = false;
 
 // Haptic pulse modes
-enum HapticPulseMode { HPM_IDLE = 0, HPM_SINGLE, HPM_BURST, HPM_TRAIN };
+enum HapticPulseMode { HPM_IDLE = 0, HPM_SINGLE, HPM_BURST, HPM_TRAIN, HPM_MULTI };
 HapticPulseMode hapticPulseMode = HPM_IDLE;
 
 // SINGLE pulse timing
@@ -194,14 +194,26 @@ unsigned long haptic_train_period_us = 0, haptic_train_pw_us = 0;
 unsigned long haptic_train_next_toggle_us = 0;
 bool haptic_train_state_on = false;
 
+// Safe time-division state for multi-channel stimulation on the reduced set of
+// known-good HV routes.
+bool hapticMultiActive[4] = {false, false, false, false};
+int hapticMultiPot[4] = {255, 255, 255, 255};
+int hapticMultiPos[4] = {2, 4, 12, 10};
+int hapticMultiCursor = -1;
+int hapticMultiActiveCount = 0;
+unsigned long haptic_multi_next_slot_us = 0;
+unsigned long haptic_multi_slot_period_us = 0;
+unsigned long haptic_multi_pw_us = HAPTIC_DEFAULT_PW_US;
+const unsigned long HAPTIC_MULTI_ROUTE_GUARD_US = 80UL;
+
 // Haptic configuration parameters
 float hapticFreq_Hz = HAPTIC_DEFAULT_FREQ_HZ;
 unsigned long hapticPulseWidth_us = HAPTIC_DEFAULT_PW_US;
 unsigned long hapticTrainDuration_ms = HAPTIC_DEFAULT_TRAIN_MS;
 unsigned long hapticActionLockUntilMs = 0;
-int hapticMuxCursor = -1;  // Round-robin cursor across [yaw,pitch,roll,throttle]
 bool hapticDebugEnabled = false;
 bool hapticAnyActiveLast = false;
+unsigned long lastHapticDebugPrintMs = 0;
 
 // -------- Haptic Feedback Mapping (from PDF) --------
 // HV2701 position words copied from est_fuante_pruebas.ino
@@ -229,12 +241,13 @@ const uint16_t positions[21] = {
   0b1110000000001010   // M20
 };
 
-// Position presets corresponding to hand regions
+// Final hardware mapping: only these HV switch paths are reliable on the
+// current board, so all haptic feedback is routed through them.
 enum HapticPosition {
-  HAPTIC_POS_YAW = 4,        // M4: Thumb region (Channel 2)
-  HAPTIC_POS_PITCH = 8,      // M8: Index region (Channel 3)
-  HAPTIC_POS_ROLL = 12,      // M12: Middle/Ring region (Channel 4)
-  HAPTIC_POS_THROTTLE = 20   // M20: Palm region (Channels 10)
+  HAPTIC_POS_YAW = 2,        // M2: Thumb region (Channel 1)
+  HAPTIC_POS_PITCH = 4,      // M4: Index region (Channel 2)
+  HAPTIC_POS_ROLL = 12,      // M12: Ring_top region (Channel 4)
+  HAPTIC_POS_THROTTLE = 10   // M10: Middle_bottom region (Channel 7)
 };
 
 // Haptic feedback state for continuous controls
@@ -247,10 +260,10 @@ struct HapticFeedback {
   unsigned long lastTriggerMs;
 };
 
-HapticFeedback hapticYaw = {HAPTIC_POS_YAW, 0.0f, 16, 25, false, 0};
-HapticFeedback hapticPitch = {HAPTIC_POS_PITCH, 0.0f, 23, 28, false, 0};
-HapticFeedback hapticRoll = {HAPTIC_POS_ROLL, 0.0f, 28, 35, false, 0};
-HapticFeedback hapticThrottle = {HAPTIC_POS_THROTTLE, 0.0f, 14, 20, false, 0};
+HapticFeedback hapticYaw = {HAPTIC_POS_YAW, 0.0f, 14, 25, false, 0};
+HapticFeedback hapticPitch = {HAPTIC_POS_PITCH, 0.0f, 15, 25, false, 0};
+HapticFeedback hapticRoll = {HAPTIC_POS_ROLL, 0.0f, 15, 28, false, 0};
+HapticFeedback hapticThrottle = {HAPTIC_POS_THROTTLE, 0.0f, 9, 18, false, 0};
 
 // Haptic feedback update interval (ms)
 const unsigned long HAPTIC_FEEDBACK_UPDATE_MS = 10;
@@ -364,36 +377,81 @@ void hapticSetPot(byte value) {
   haptic_spi_busy = false;
 }
 
-const char* hapticAxisName(int idx) {
-  switch (idx) {
-    case 0: return "YAW";
-    case 1: return "PITCH";
-    case 2: return "ROLL";
-    case 3: return "THROTTLE";
-    default: return "UNKNOWN";
-  }
-}
-
 const char* hapticPosName(HapticPosition pos) {
   switch (pos) {
-    case HAPTIC_POS_YAW: return "M4";
-    case HAPTIC_POS_PITCH: return "M8";
+    case HAPTIC_POS_YAW: return "M2";
+    case HAPTIC_POS_PITCH: return "M4";
     case HAPTIC_POS_ROLL: return "M12";
-    case HAPTIC_POS_THROTTLE: return "M20";
+    case HAPTIC_POS_THROTTLE: return "M10";
     default: return "M?";
   }
 }
 
-// -------- Haptic Feedback Triggers (from PDF mapping) --------
-void triggerHapticFeedback(HapticFeedback *feedback, int potValue) {
-  // Set position on HV2701 switch matrix
-  hapticSendToHV2701(positions[feedback->position]);
-  // Set potentiometer intensity
-  hapticSetPot(potValue);
-  // Start train mode for continuous feedback
-  hapticStartTrain(HAPTIC_DEFAULT_FREQ_HZ, HAPTIC_DEFAULT_PW_US, HAPTIC_DEFAULT_TRAIN_MS);
-  feedback->isActive = true;
-  feedback->lastTriggerMs = millis();
+float hapticStickNorm(uint8_t stick) {
+  int delta = abs((int)stick - (int)STICK_MID);
+  if (delta <= 2) return 0.0f;
+
+  float denom = (stick > STICK_MID) ?
+    (float)(STICK_MAX - STICK_MID) :
+    (float)(STICK_MID - STICK_MIN);
+  return constrain((float)delta / denom, 0.0f, 1.0f);
+}
+
+void hapticClearRouting() {
+  hapticHvState = 0x0000;
+  hapticSendToHV2701(hapticHvState);
+}
+
+void hapticRefreshMultiSchedule() {
+  hapticMultiActiveCount = 0;
+  for (int i = 0; i < 4; i++) {
+    if (hapticMultiActive[i]) hapticMultiActiveCount++;
+  }
+
+  if (hapticMultiActiveCount <= 0) {
+    haptic_multi_slot_period_us = 0;
+    return;
+  }
+
+  float frameFreq = (hapticFreq_Hz > 0.0f) ? hapticFreq_Hz : HAPTIC_DEFAULT_FREQ_HZ;
+  haptic_multi_slot_period_us = (unsigned long)round(1000000.0f / frameFreq);
+  unsigned long minSafePeriodUs = haptic_multi_pw_us + (4UL * HAPTIC_MULTI_ROUTE_GUARD_US) + 400UL;
+  if (haptic_multi_slot_period_us < minSafePeriodUs) {
+    haptic_multi_slot_period_us = minSafePeriodUs;
+  }
+}
+
+bool hapticEmitNextMultiPulse() {
+  if (hapticMultiActiveCount <= 0) return false;
+
+  for (int step = 1; step <= 4; step++) {
+    int idx = (hapticMultiCursor + step) % 4;
+    if (!hapticMultiActive[idx]) continue;
+
+    hapticMultiCursor = idx;
+
+    // Force a fully-closed matrix before touching the pot or arming the next
+    // route, so each pulse is delivered only through its assigned M position.
+    hapticClearRouting();
+    delayMicroseconds(HAPTIC_MULTI_ROUTE_GUARD_US);
+
+    hapticSetPot((byte)constrain(hapticMultiPot[idx], 0, 255));
+    delayMicroseconds(HAPTIC_MULTI_ROUTE_GUARD_US);
+
+    hapticHvState = positions[hapticMultiPos[idx]];
+    hapticSendToHV2701(hapticHvState);
+    delayMicroseconds(HAPTIC_MULTI_ROUTE_GUARD_US);
+
+    digitalWrite(HAPTIC_OUT_PIN, HIGH);
+    delayMicroseconds(haptic_multi_pw_us);
+    digitalWrite(HAPTIC_OUT_PIN, LOW);
+
+    hapticClearRouting();
+    delayMicroseconds(HAPTIC_MULTI_ROUTE_GUARD_US);
+    return true;
+  }
+
+  return false;
 }
 
 void triggerHapticAction(HapticPosition position, int potValue, int burstCount = HAPTIC_ACTION_BURST_DEFAULT_COUNT) {
@@ -428,32 +486,20 @@ void triggerHapticAction(HapticPosition position, int potValue, int burstCount =
 // Update haptic feedback based on current control values (called from loop)
 void updateHapticFeedback(uint8_t stickYaw, uint8_t stickPitch, uint8_t stickRoll, uint8_t stickThrottle) {
   // Skip all feedback while flip is in progress (gesture 7 action)
-  if (flipInProgress) return;
+  if (flipInProgress) {
+    if (hapticPulseMode == HPM_MULTI) hapticStopPulses();
+    return;
+  }
 
   unsigned long now = millis();
   if ((long)(hapticActionLockUntilMs - now) > 0) return;
   if (now - lastHapticFeedbackMs < HAPTIC_FEEDBACK_UPDATE_MS) return;
   lastHapticFeedbackMs = now;
 
-  float yawNorm = (stickYaw > STICK_MID) ?
-    (float)(stickYaw - STICK_MID) / (float)(STICK_MAX - STICK_MID) :
-    (float)(STICK_MID - stickYaw) / (float)(STICK_MID - STICK_MIN);
-  yawNorm = constrain(yawNorm, 0.0f, 1.0f);
-
-  float pitchNorm = (stickPitch > STICK_MID) ?
-    (float)(stickPitch - STICK_MID) / (float)(STICK_MAX - STICK_MID) :
-    (float)(STICK_MID - stickPitch) / (float)(STICK_MID - STICK_MIN);
-  pitchNorm = constrain(pitchNorm, 0.0f, 1.0f);
-
-  float rollNorm = (stickRoll > STICK_MID) ?
-    (float)(stickRoll - STICK_MID) / (float)(STICK_MAX - STICK_MID) :
-    (float)(STICK_MID - stickRoll) / (float)(STICK_MID - STICK_MIN);
-  rollNorm = constrain(rollNorm, 0.0f, 1.0f);
-
-  float throttleNorm = (stickThrottle > STICK_MID) ?
-    (float)(stickThrottle - STICK_MID) / (float)(STICK_MAX - STICK_MID) :
-    (float)(STICK_MID - stickThrottle) / (float)(STICK_MID - STICK_MIN);
-  throttleNorm = constrain(throttleNorm, 0.0f, 1.0f);
+  float yawNorm = hapticStickNorm(stickYaw);
+  float pitchNorm = hapticStickNorm(stickPitch);
+  float rollNorm = hapticStickNorm(stickRoll);
+  float throttleNorm = hapticStickNorm(stickThrottle);
 
   bool yawActive = yawNorm > 0.0f;
   bool pitchActive = pitchNorm > 0.0f;
@@ -462,11 +508,12 @@ void updateHapticFeedback(uint8_t stickYaw, uint8_t stickPitch, uint8_t stickRol
 
   if (!yawActive && !pitchActive && !rollActive && !throttleActive) {
     hapticStopPulses();
+    hapticClearRouting();
     hapticYaw.isActive = false;
     hapticPitch.isActive = false;
     hapticRoll.isActive = false;
     hapticThrottle.isActive = false;
-    hapticMuxCursor = -1;
+    hapticMultiCursor = -1;
     if (hapticDebugEnabled && hapticAnyActiveLast) {
       Serial.println(F("[HDBG] TRAIN idle (all controls neutral)"));
     }
@@ -479,32 +526,27 @@ void updateHapticFeedback(uint8_t stickYaw, uint8_t stickPitch, uint8_t stickRol
   int rollPot = hapticRoll.potMax - (int)(rollNorm * (hapticRoll.potMax - hapticRoll.potMin));
   int throttlePot = hapticThrottle.potMax - (int)(throttleNorm * (hapticThrottle.potMax - hapticThrottle.potMin));
 
-  // Time-division multiplexing across active channels: one channel per update.
-  bool chanActive[4] = {yawActive, pitchActive, rollActive, throttleActive};
-  int chanPot[4] = {yawPot, pitchPot, rollPot, throttlePot};
-  HapticPosition chanPos[4] = {hapticYaw.position, hapticPitch.position, hapticRoll.position, hapticThrottle.position};
-
-  int chosen = -1;
-  for (int step = 1; step <= 4; step++) {
-    int idx = (hapticMuxCursor + step) % 4;
-    if (chanActive[idx]) {
-      chosen = idx;
-      break;
-    }
+  if (hapticPulseMode != HPM_MULTI) {
+    hapticStopPulses();
+    hapticClearRouting();
+    hapticPulseMode = HPM_MULTI;
+    haptic_multi_next_slot_us = micros();
   }
-  if (chosen < 0) return;
-  hapticMuxCursor = chosen;
 
-  hapticSendToHV2701(positions[(int)chanPos[chosen]]);
-  hapticSetPot((byte)constrain(chanPot[chosen], 0, 255));
-
-  // Keep train continuous while off-neutral and stop immediately when neutral.
-  if (hapticPulseMode != HPM_TRAIN) {
-    hapticStartTrain(HAPTIC_DEFAULT_FREQ_HZ, HAPTIC_DEFAULT_PW_US, 60000UL);
-  } else {
-    haptic_train_start_ms = now;
-    haptic_train_duration_ms_running = 60000UL;
-  }
+  hapticMultiActive[0] = yawActive;
+  hapticMultiActive[1] = pitchActive;
+  hapticMultiActive[2] = rollActive;
+  hapticMultiActive[3] = throttleActive;
+  hapticMultiPot[0] = constrain(yawPot, 0, 255);
+  hapticMultiPot[1] = constrain(pitchPot, 0, 255);
+  hapticMultiPot[2] = constrain(rollPot, 0, 255);
+  hapticMultiPot[3] = constrain(throttlePot, 0, 255);
+  hapticMultiPos[0] = hapticYaw.position;
+  hapticMultiPos[1] = hapticPitch.position;
+  hapticMultiPos[2] = hapticRoll.position;
+  hapticMultiPos[3] = hapticThrottle.position;
+  haptic_multi_pw_us = max(1UL, hapticPulseWidth_us);
+  hapticRefreshMultiSchedule();
 
   hapticYaw.isActive = yawActive;
   hapticPitch.isActive = pitchActive;
@@ -522,18 +564,41 @@ void updateHapticFeedback(uint8_t stickYaw, uint8_t stickPitch, uint8_t stickRol
   hapticThrottle.lastTriggerMs = now;
   hapticAnyActiveLast = true;
 
-  if (hapticDebugEnabled) {
-    Serial.print(F("[HDBG] TRAIN axis="));
-    Serial.print(hapticAxisName(chosen));
-    Serial.print(F(" pos="));
-    Serial.print(hapticPosName(chanPos[chosen]));
-    Serial.print(F(" pot="));
-    Serial.print(chanPot[chosen]);
+  if (hapticDebugEnabled && (now - lastHapticDebugPrintMs) >= 200UL) {
+    lastHapticDebugPrintMs = now;
+    Serial.print(F("[HDBG] MULTI_SAFE active="));
+    Serial.print(hapticMultiActiveCount);
+    Serial.print(F(" frame_us="));
+    Serial.print(haptic_multi_slot_period_us);
+    Serial.print(F(" pw_us="));
+    Serial.print(haptic_multi_pw_us);
+    Serial.print(F(" guard_us="));
+    Serial.print(HAPTIC_MULTI_ROUTE_GUARD_US);
     Serial.print(F(" active=["));
     if (yawActive) Serial.print(F("Y"));
     if (pitchActive) Serial.print(F("P"));
     if (rollActive) Serial.print(F("R"));
     if (throttleActive) Serial.print(F("T"));
+    Serial.print(F("] pots=["));
+    if (yawActive) {
+      Serial.print(F("Y:"));
+      Serial.print(yawPot);
+      Serial.print(F(" "));
+    }
+    if (pitchActive) {
+      Serial.print(F("P:"));
+      Serial.print(pitchPot);
+      Serial.print(F(" "));
+    }
+    if (rollActive) {
+      Serial.print(F("R:"));
+      Serial.print(rollPot);
+      Serial.print(F(" "));
+    }
+    if (throttleActive) {
+      Serial.print(F("T:"));
+      Serial.print(throttlePot);
+    }
     Serial.println(F("]"));
   }
 }
@@ -545,6 +610,9 @@ void hapticStopPulses() {
   haptic_burst_index = 0;
   haptic_burst_state_on = false;
   haptic_train_state_on = false;
+  hapticMultiActiveCount = 0;
+  hapticMultiCursor = -1;
+  for (int i = 0; i < 4; i++) hapticMultiActive[i] = false;
 }
 
 void hapticStartSingle(unsigned long d) {
@@ -591,6 +659,7 @@ void hapticUpdatePulses() {
     case HPM_SINGLE:
       if (now_ms - haptic_single_start_ms >= haptic_single_duration_ms) {
         digitalWrite(HAPTIC_OUT_PIN, LOW);
+        hapticClearRouting();
         hapticPulseMode = HPM_IDLE;
       }
       break;
@@ -598,6 +667,7 @@ void hapticUpdatePulses() {
     case HPM_BURST:
       if (haptic_burst_index >= haptic_burst_total) {
         digitalWrite(HAPTIC_OUT_PIN, LOW);
+        hapticClearRouting();
         hapticPulseMode = HPM_IDLE;
         break;
       }
@@ -611,6 +681,7 @@ void hapticUpdatePulses() {
       } else {
         if (haptic_burst_index >= haptic_burst_total) {
           digitalWrite(HAPTIC_OUT_PIN, LOW);
+          hapticClearRouting();
           hapticPulseMode = HPM_IDLE;
         } else if (now_ms - haptic_burst_last_ms >= haptic_burst_off_ms) {
           haptic_burst_state_on = true;
@@ -623,6 +694,7 @@ void hapticUpdatePulses() {
     case HPM_TRAIN:
       if (now_ms - haptic_train_start_ms >= haptic_train_duration_ms_running) {
         digitalWrite(HAPTIC_OUT_PIN, LOW);
+        hapticClearRouting();
         hapticPulseMode = HPM_IDLE;
         haptic_train_state_on = false;
         break;
@@ -631,6 +703,7 @@ void hapticUpdatePulses() {
         unsigned long on_since = now_us - (haptic_train_next_toggle_us - haptic_train_pw_us);
         if (on_since >= haptic_train_pw_us) {
           digitalWrite(HAPTIC_OUT_PIN, LOW);
+          hapticClearRouting();
           haptic_train_state_on = false;
           unsigned long off_time_us = (haptic_train_period_us > haptic_train_pw_us) ?
                                       (haptic_train_period_us - haptic_train_pw_us) : 0;
@@ -642,6 +715,22 @@ void hapticUpdatePulses() {
           haptic_train_state_on = true;
           haptic_train_next_toggle_us = now_us + haptic_train_pw_us;
         }
+      }
+      break;
+
+    case HPM_MULTI:
+      if (hapticMultiActiveCount <= 0) {
+        hapticClearRouting();
+        hapticPulseMode = HPM_IDLE;
+        break;
+      }
+      if ((long)(now_us - haptic_multi_next_slot_us) >= 0) {
+        if (!hapticEmitNextMultiPulse()) {
+          hapticClearRouting();
+          hapticPulseMode = HPM_IDLE;
+          break;
+        }
+        haptic_multi_next_slot_us = micros() + haptic_multi_slot_period_us;
       }
       break;
   }
@@ -1110,14 +1199,14 @@ void applyNNAction(int cls) {
   switch (cls) {
     case 1:
       flagStop = true;
-      triggerHapticAction(HAPTIC_POS_THROTTLE, 18);  // STOP: 1 burst on M20 (palm) with pot 18
+      triggerHapticAction(HAPTIC_POS_THROTTLE, 18);  // STOP: 1 burst on M10 (middle_bottom) with pot 18
       Serial.println(F("[HAPTIC] Stop feedback triggered"));
       Serial.println(F("[NN] STOP action"));
       break;
 
     case 3:
       flagTakeoff = true;
-      triggerHapticAction(HAPTIC_POS_YAW, 20);  // TAKEOFF: 1 burst on M4 (thumb) with pot 20
+      triggerHapticAction(HAPTIC_POS_YAW, 20);  // TAKEOFF: 1 burst on M2 (thumb) with pot 20
       Serial.println(F("[HAPTIC] Takeoff feedback triggered"));
       Serial.println(F("[NN] TAKEOFF action"));
       break;
@@ -1133,13 +1222,13 @@ void applyNNAction(int cls) {
       nnFlipModeEnabled = true;
       nnFlipTriggerLatched = false;
       nnFlipModeSinceMillis = millis();
-      triggerHapticAction(HAPTIC_POS_THROTTLE, 18, HAPTIC_ACTION_BURST_SPECIAL_COUNT);  // 3 bursts on M20 (palm) to indicate flip mode armed
+      triggerHapticAction(HAPTIC_POS_THROTTLE, 18, HAPTIC_ACTION_BURST_SPECIAL_COUNT);  // 3 bursts on M10 (middle_bottom) to indicate flip mode armed
       Serial.println(F("[NN] FLIP ARMED (one-shot)"));
       break;
 
     case 2:
       flagCamUp = true;
-      triggerHapticAction(HAPTIC_POS_PITCH, 25);  // CAM_UP feedback on M8 (index) with pot 25
+      triggerHapticAction(HAPTIC_POS_PITCH, 25);  // CAM_UP=LAND feedback on M4 (index_top) with pot 25
       Serial.println(F("[HAPTIC] Cam-up feedback triggered"));
       Serial.println(F("[NN] CAM_UP action"));
       break;
@@ -1722,7 +1811,7 @@ void loop() {
       cmd = CMD_TAKEOFF;
       flagTakeoff = false;
       flightArmed = true;
-      // Haptic feedback: Takeoff on thumb region (M4) with pot 20
+      // Haptic feedback: Takeoff on thumb region (M2) with pot 20
       triggerHapticAction(HAPTIC_POS_YAW, 20);
       Serial.println(F("[HAPTIC] Takeoff feedback triggered"));
       if (!controlStarted) {
@@ -1735,7 +1824,7 @@ void loop() {
       flagStop = false;
       flightArmed = false;
       clearFlipState();
-      // Haptic feedback: Stop on palm region (M20) with pot 18
+      // Haptic feedback: Stop on middle_bottom region (M10) with pot 18
       triggerHapticAction(HAPTIC_POS_THROTTLE, 18);
       Serial.println(F("[HAPTIC] Stop feedback triggered"));
     }
@@ -1750,7 +1839,7 @@ void loop() {
     if (flagLand) {
       flagLand = false;
       clearFlipState();
-      // Haptic feedback: Landing on index region (M8) with pot 25
+      // Haptic feedback: Landing on index_top region (M4) with pot 25
       triggerHapticAction(HAPTIC_POS_PITCH, 25);
       Serial.println(F("[HAPTIC] Landing feedback triggered"));
       sendLandPacket(stickYaw);

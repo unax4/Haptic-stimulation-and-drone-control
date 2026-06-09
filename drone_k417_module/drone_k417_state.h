@@ -73,7 +73,7 @@ int hapticPotValue = 255;
 uint16_t hapticHvState = 0x0000;
 volatile bool haptic_spi_busy = false;
 
-enum HapticPulseMode { HPM_IDLE = 0, HPM_SINGLE, HPM_BURST, HPM_TRAIN };
+enum HapticPulseMode { HPM_IDLE = 0, HPM_SINGLE, HPM_BURST, HPM_TRAIN, HPM_MULTI };
 HapticPulseMode hapticPulseMode = HPM_IDLE;
 
 unsigned long haptic_single_start_ms = 0, haptic_single_duration_ms = 0;
@@ -86,19 +86,31 @@ unsigned long haptic_train_period_us = 0, haptic_train_pw_us = 0;
 unsigned long haptic_train_next_toggle_us = 0;
 bool haptic_train_state_on = false;
 
+// Safe time-division state for multi-channel stimulation on the reduced set of
+// known-good HV routes.
+bool hapticMultiActive[4] = {false, false, false, false};
+int hapticMultiPot[4] = {255, 255, 255, 255};
+int hapticMultiPos[4] = {2, 4, 12, 10};
+int hapticMultiCursor = -1;
+int hapticMultiActiveCount = 0;
+unsigned long haptic_multi_next_slot_us = 0;
+unsigned long haptic_multi_slot_period_us = 0;
+unsigned long haptic_multi_pw_us = HAPTIC_DEFAULT_PW_US;
+const unsigned long HAPTIC_MULTI_ROUTE_GUARD_US = 80UL;
+
 float hapticFreq_Hz = HAPTIC_DEFAULT_FREQ_HZ;
 unsigned long hapticPulseWidth_us = HAPTIC_DEFAULT_PW_US;
 unsigned long hapticTrainDuration_ms = HAPTIC_DEFAULT_TRAIN_MS;
 unsigned long hapticActionLockUntilMs = 0;
-int hapticMuxCursor = -1;
 bool hapticDebugEnabled = false;
 bool hapticAnyActiveLast = false;
+unsigned long lastHapticDebugPrintMs = 0;
 
 enum HapticPosition {
-  HAPTIC_POS_YAW = 4,
-  HAPTIC_POS_PITCH = 8,
-  HAPTIC_POS_ROLL = 12,
-  HAPTIC_POS_THROTTLE = 20
+  HAPTIC_POS_YAW = 2,        // M2: Thumb region (Channel 1)
+  HAPTIC_POS_PITCH = 4,      // M4: Index region (Channel 2)
+  HAPTIC_POS_ROLL = 12,      // M12: Ring_top region (Channel 4)
+  HAPTIC_POS_THROTTLE = 10   // M10: Middle_bottom region (Channel 7)
 };
 
 struct HapticFeedback {
@@ -110,9 +122,9 @@ struct HapticFeedback {
   unsigned long lastTriggerMs;
 };
 
-HapticFeedback hapticYaw = {HAPTIC_POS_YAW, 0.0f, 16, 25, false, 0};
-HapticFeedback hapticPitch = {HAPTIC_POS_PITCH, 0.0f, 23, 28, false, 0};
-HapticFeedback hapticRoll = {HAPTIC_POS_ROLL, 0.0f, 28, 35, false, 0};
+HapticFeedback hapticYaw = {HAPTIC_POS_YAW, 0.0f, 18, 25, false, 0};
+HapticFeedback hapticPitch = {HAPTIC_POS_PITCH, 0.0f, 15, 25, false, 0};
+HapticFeedback hapticRoll = {HAPTIC_POS_ROLL, 0.0f, 15, 28, false, 0};
 HapticFeedback hapticThrottle = {HAPTIC_POS_THROTTLE, 0.0f, 14, 20, false, 0};
 
 const unsigned long HAPTIC_FEEDBACK_UPDATE_MS = 10;

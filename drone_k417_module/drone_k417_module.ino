@@ -14,7 +14,7 @@
 
 #if ENABLE_GLOVE_NN
 #include <eloquent_tensorflow_cortexm.h>
-#include "neural/glove_fcnn_40_20_model_data.h"
+#include "neural/glove_fcnn_eloquent_inference/glove_fcnn_40_20_model_data.h"
 #endif
 
 // User configuration
@@ -27,11 +27,11 @@ const int CONTROL_HZ = 40;
 const int TELEMETRY_HZ = 25;
 
 // Haptic pins
-const int HAPTIC_POT_CS   = 6;
-const int HAPTIC_DATA_PIN = 5;
-const int HAPTIC_CLK_PIN  = 4;
-const int HAPTIC_HV_LE    = 3;
-const int HAPTIC_HV_CLR   = 2;
+const int HAPTIC_POT_CS   = 10;
+const int HAPTIC_DATA_PIN = 9;
+const int HAPTIC_CLK_PIN  = 8;
+const int HAPTIC_HV_LE    = 7;
+const int HAPTIC_HV_CLR   = 6;
 const int HAPTIC_OUT_PIN  = 12;
 
 // Haptic configuration
@@ -47,7 +47,7 @@ const unsigned long HAPTIC_DEFAULT_TRAIN_MS = 2000;
 
 const float MAHONY_KP = 3.5f;
 const float MAHONY_KI = 0.03f;
-const int GYRO_CALIB_N = 250;
+const int GYRO_CALIB_N = 200;
 const int FLEX_CALIB_N = 80;
 
 const uint8_t STICK_MIN = 40;
@@ -175,6 +175,8 @@ void setup() {
 #else
   Serial.println(F("[NN] Disabled at compile time (set ENABLE_GLOVE_NN=1)."));
 #endif
+
+  triggerLocalRecalibration();
 
   lastImuMicros = micros();
   lastCtrlMillis = millis();
