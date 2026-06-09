@@ -60,9 +60,6 @@ The control strategy developed here was later ported to the K417 final platform.
 - `captures/`
   Captured material from experiments.
 
-- `build/`
-  Arduino build output.
-
 ## Read this next
 
 - [E58_WIFI_CAM_PROTOCOL.md](./E58_WIFI_CAM_PROTOCOL.md)

@@ -3,6 +3,8 @@
 #include <Arduino.h>
 #include <string.h>
 
+void clearFlipState();
+
 void buildPacket(uint8_t *buf,
                  uint8_t roll,
                  uint8_t pitch,

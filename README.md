@@ -13,7 +13,7 @@ The project evolved in two clear stages:
   Prototype implementation for the E58 platform. It keeps the modular Arduino firmware, the PC-side control scripts used during protocol and control-law development, and the neural assets used for glove inference experiments.
 
 - `drone_k417/`
-  Final implementation for the K417 platform. This is the main firmware branch for the thesis and includes the modular Arduino controller, haptic feedback modules, camera/telemetry utilities, and the neural assets used in the final system.
+  Final implementation for the K417 platform. This is the main firmware branch for the thesis and includes the modular Arduino controller, the haptic feedback modules, the PC-side monitoring/control utilities, and the neural assets used in the final system.
 
 - `control_pcb/`
   Standalone sketch for validating the electro-tactile PCB. It is used to test the MAX5413, the HV switch matrix, pulse generation, and electrode routing without involving the drone controller.
@@ -56,6 +56,9 @@ The project evolved in two clear stages:
 
 - `drone_k417/telemetry_monitor.py`
   Telemetry and runtime monitoring tool for the final K417 workflow.
+
+- `drone_k417/noise_bar_detector.py`
+  Debug utility used during signal and telemetry inspection.
 
 ## Structure cleanup
 
