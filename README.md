@@ -1,110 +1,75 @@
 # Haptic Stimulation and Drone Control
 
-A comprehensive system for drone control with haptic feedback integration, featuring computer vision capabilities and neural network-based gesture recognition.
+This repository contains the code used for a thesis project on glove-based drone control with electro-tactile feedback.
 
-## Project Overview
+The project evolved in two clear stages:
 
-This project implements a haptic feedback system integrated with UAV (Unmanned Aerial Vehicle) control. It includes control protocols for multiple drone models (E58 and K417), real-time video processing, and neural network-based gesture recognition for intuitive drone control via a haptic glove.
+1. `drone_e58/` was the prototype platform used to derive the flight-control logic, validate the WiFi control workflow, and iterate on the IMU-to-stick mapping.
+2. `drone_k417/` is the final integrated platform used for the thesis, where the control pipeline was ported to the K417 and combined with the final haptic feedback behavior.
 
-## Directory Structure
+## Main folders
 
-### **Core Drone Projects**
+- `drone_e58/`
+  Prototype implementation for the E58 platform. It keeps the modular Arduino firmware, the PC-side control scripts used during protocol and control-law development, and the neural assets used for glove inference experiments.
 
-#### `drone_e58/`
-- **E58 Drone Control Implementation**
-- Contains Python control scripts and firmware for the E58 drone model
-- **Key files:**
-  - `drone_e58.ino` - Arduino firmware for E58 drone
-  - `control_video_e58_v7.py`, `control_video_e58_v8.py` - Control scripts with video processing
-  - `distance_estimator_v2.py` - Distance estimation from camera feed
-  - `haptic_live_monitor.py` - Real-time haptic feedback monitoring
-  - `E58_WIFI_CAM_PROTOCOL.md` - WiFi camera communication protocol documentation
-- **Subdirectories:**
-  - `neural/` - Neural network models for gesture recognition (TFLite models, training scripts)
-  - `build/` - Arduino build artifacts
-  - `archive/` - Previous versions of firmware
+- `drone_k417/`
+  Final implementation for the K417 platform. This is the main firmware branch for the thesis and includes the modular Arduino controller, haptic feedback modules, camera/telemetry utilities, and the neural assets used in the final system.
 
-#### `drone_e58_module/`
-- **Modular Arduino Implementation for E58 with Haptic Integration**
-- Header files implementing modular drone control system
-- **Key components:**
-  - `drone_e58_module.ino` - Main module firmware
-  - `drone_ahrs.h` - AHRS (Attitude Heading Reference System) implementation
-  - `drone_haptics.h` - Haptic feedback controller
-  - `drone_nn.h` - Neural network inference module
-  - `drone_protocol.h` - Communication protocol handler
-  - `drone_serial.h` - Serial communication interface
-  - `drone_state.h` - Drone state management
-  - `HAPTIC_FEEDBACK_SYSTEM_DOCUMENTATION.md` - Detailed haptic system documentation
-- **Subdirectories:**
-  - `neural/` - TFLite models and training data for gesture recognition
+- `control_pcb/`
+  Standalone sketch for validating the electro-tactile PCB. It is used to test the MAX5413, the HV switch matrix, pulse generation, and electrode routing without involving the drone controller.
 
-#### `drone_k417/`
-- **K417 Drone Control Implementation**
-- Similar structure to E58 but specific to K417 model
-- **Key files:**
-  - `drone_k417.ino` - Arduino firmware for K417
-  - `control_video_*.py` - Multiple versions of control scripts
-  - `distance_estimator_v2.py` - Distance measurement
-  - `telemetry_monitor.py` - Real-time telemetry display
-  - `noise_bar_detector.py` - Audio/signal noise detection
-- **Subdirectories:**
-  - `neural/` - Neural network models
-  - `camera_prog/` - Camera-specific control and tracking code
-  - `build/` & `build_noNN/` - Build artifacts (with and without neural network)
-  - `Original project/` - Complete reference implementation with backend/frontend
+- `TFM_Guante_Haptico/`
+  Thesis source files.
 
-#### `drone_k417_module/`
-- **Modular Arduino Implementation for K417 with Haptic Integration**
-- Header files implementing modular drone control system
-- **Key components:**
-  - `drone_k417_module.ino` - Main module firmware
-  - `drone_ahrs.h` - AHRS (Attitude Heading Reference System) implementation
-  - `drone_haptics.h` - Haptic feedback controller
-  - `drone_nn.h` - Neural network inference module
-  - `drone_protocol.h` - Communication protocol handler
-  - `drone_serial.h` - Serial communication interface
-  - `drone_state.h` - Drone state management
-  - `HAPTIC_FEEDBACK_SYSTEM_DOCUMENTATION.md` - Detailed haptic system documentation
-- **Subdirectories:**
-  - `neural/` - TFLite models and training data for gesture recognition
+- `BOH-Electro-Tactile-main/`
+  External reference implementation kept in the repository because it informed the electro-tactile hardware/software design.
 
-#### `est_fuante_pruebas/`
-- **Testing and Experimentation**
-- Contains test implementations for fuente (source) components
-- `est_fuante_pruebas.ino` - Test Arduino firmware
+- `captures/`
+  Captured data and support material.
 
-### **Root Level Files**
+- `etc/`
+  Miscellaneous support scripts and older utilities kept for reference.
 
-- `main_prog_vMahony.py` - Main program using Mahony AHRS algorithm
-- `HAPTIC_FEEDBACK_SYSTEM_DOCUMENTATION.md` - System-wide haptic documentation
-- `yolov8n.pt`, `yolov8n-seg.pt` - YOLOv8 pre-trained models for object detection/segmentation
+- `papatxe_copy_20260528154051/`
+  Historical snapshot kept as backup/reference material.
 
-## Key Technologies
+## Main active programs
 
-- **Hardware:** Arduino (Nano RP2040 Connect), E58 & K417 drones, Haptic gloves
-- **Computer Vision:** OpenCV, YOLOv8, distance estimation
-- **Neural Networks:** TensorFlow Lite for gesture recognition
-- **Protocols:** WiFi camera protocol, Serial communication, AHRS/IMU integration
-- **AHRS:** Mahony algorithm for attitude estimation
+### Firmware
 
-## Documentation
+- [drone_e58/drone_e58.ino](./drone_e58/drone_e58.ino)
+  Modular Arduino Nano RP2040 Connect firmware for the E58 prototype.
 
-- [Haptic Feedback System Documentation](./drone_e58_module/HAPTIC_FEEDBACK_SYSTEM_DOCUMENTATION.md)
-- [E58 WiFi Protocol](./drone_e58/E58_WIFI_CAM_PROTOCOL.md)
-- [K417 WiFi Protocol](./drone_k417/E58_WIFI_CAM_PROTOCOL.md)
+- [drone_k417/drone_k417.ino](./drone_k417/drone_k417.ino)
+  Modular Arduino Nano RP2040 Connect firmware for the final K417 system.
 
-## Getting Started
+- [control_pcb/control_pcb.ino](./control_pcb/control_pcb.ino)
+  Electrical and routing test sketch for the haptic PCB.
 
-1. Select your drone model (E58 or K417)
-2. Review the relevant control scripts and documentation
-3. Upload the appropriate Arduino firmware (.ino file)
-4. Run the Python control script for computer vision and haptic feedback
-5. Check neural network models in `neural/` directories for gesture recognition
+### PC-side utilities
 
-## Project Structure Notes
+- `drone_e58/control_video_e58_v8.py`
+  Main E58 Python controller used to study and validate the E58 protocol and flight behavior.
 
-- Multiple version numbers on files indicate iterative development
-- `neural/` directories contain TFLite models ready for embedded inference
-- Build directories contain Arduino compilation artifacts
-- Original project folders contain reference implementations with full stack (backend + frontend)
+- `drone_k417/control_video_v7.py`
+  Main K417 Python-side control utility retained in the final platform folder.
+
+- `drone_k417/telemetry_monitor.py`
+  Telemetry and runtime monitoring tool for the final K417 workflow.
+
+## Structure cleanup
+
+The repository now keeps only the modular firmware version inside each drone folder:
+
+- `drone_e58/` contains the modular E58 sketch and its headers.
+- `drone_k417/` contains the modular K417 sketch and its headers.
+- The previous non-modular top-level drone sketches were removed.
+- Neural assets remain under the drone folder that actually uses them.
+
+## Recommended reading order
+
+1. Read [README.md](./README.md)
+2. Read [drone_e58/README.md](./drone_e58/README.md)
+3. Read [drone_k417/README.md](./drone_k417/README.md)
+4. Read [HAPTIC_FEEDBACK_SYSTEM_DOCUMENTATION.md](./HAPTIC_FEEDBACK_SYSTEM_DOCUMENTATION.md)
+5. Use [control_pcb/README.md](./control_pcb/README.md) when validating the PCB independently of the drone logic.

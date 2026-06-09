@@ -31,3 +31,6 @@ build/
 *.bin
 *.hex
 *.uf2
+
+# Local historical backup kept outside the public repository
+etc/pre_cleanup_backup/
