@@ -49,6 +49,9 @@ The control strategy developed here was later ported to the K417 final platform.
 - `haptic_live_monitor.py`
   Live inspection utility for haptic-related runtime information.
 
+- `protocol_sniff/sniffmobile_e58.py`
+  Packet-capture helper preserved from the protocol reverse-engineering stage. It was used to sniff mobile-to-drone WiFi traffic while studying the E58 control packets.
+
 ## Subfolders
 
 - `neural/`
@@ -59,6 +62,9 @@ The control strategy developed here was later ported to the K417 final platform.
 
 - `captures/`
   Captured material from experiments.
+
+- `protocol_sniff/`
+  Reverse-engineering helpers kept specifically because they were used to sniff WiFi traffic and infer the E58 protocol structure.
 
 ## Read this next
 

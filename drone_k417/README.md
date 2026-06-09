@@ -79,6 +79,12 @@ This makes the folder useful not only as firmware source code, but also as the c
 - `noise_bar_detector.py`
   Utility used during signal/debug experiments.
 
+- `protocol_sniff/sniff_mobile_to_drone.py`
+  Reverse-engineering helper used to capture mobile-to-drone WiFi traffic during protocol analysis.
+
+- `protocol_sniff/sniff_drone_to_pc.py`
+  Reverse-engineering helper used to inspect traffic in the opposite direction and understand the WiFi communication path more completely.
+
 ## Subfolders
 
 - `neural/`
@@ -87,14 +93,14 @@ This makes the folder useful not only as firmware source code, but also as the c
 - `captures/`
   Captured material from experiments.
 
-- `Original project/`
-  Reverse-engineering reference material kept for traceability. It is not the main code path for the thesis deliverable.
+- `protocol_sniff/`
+  Small set of preserved sniffing scripts used during the reverse-engineering phase to study the K417 WiFi protocol.
 
 ## What is final here and what is historical
 
 The files at the root of `drone_k417/` are the public, active implementation of the final thesis platform.
 
-The `Original project/` folder is kept only as background material related to reverse engineering and earlier experimentation. It is useful for tracing how the protocol was studied, but it is not the firmware you would start from to reproduce the final glove-controlled drone system.
+The `protocol_sniff/` folder is kept as historical support material because it documents how the WiFi protocol was studied from captured traffic. Those scripts are not part of the runtime firmware, but they are useful for understanding and reproducing the reverse-engineering stage of the work.
 
 ## Read this next
 
