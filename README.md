@@ -85,3 +85,6 @@ The public repository keeps the modular firmware versions as the active ones:
 3. [drone_k417/K417_PROTOCOL.md](./drone_k417/K417_PROTOCOL.md) for the final drone packet structure
 4. [drone_e58/README.md](./drone_e58/README.md) for the prototype stage
 5. [control_pcb/README.md](./control_pcb/README.md) for standalone PCB validation
+
+
+<div style="padding:56.25% 0 0 0;position:relative;"><iframe src="https://player.vimeo.com/video/1199376986?badge=0&amp;autopause=0&amp;player_id=0&amp;app_id=58479" frameborder="0" allow="autoplay; fullscreen; picture-in-picture; clipboard-write; encrypted-media; web-share" referrerpolicy="strict-origin-when-cross-origin" style="position:absolute;top:0;left:0;width:100%;height:100%;" title="VID_20260605_112211"></iframe></div><script src="https://player.vimeo.com/api/player.js"></script>
